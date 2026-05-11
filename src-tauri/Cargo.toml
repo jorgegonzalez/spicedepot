@@ -3,7 +3,7 @@ name = "spicelens"
 version = "0.1.0"
 description = "Cross-platform SpiceDB GUI"
 authors = ["SpiceLens contributors"]
-license = "MIT"
+license = "AGPL-3.0-or-later"
 edition = "2021"
 rust-version = "1.80"
 

@@ -135,7 +135,7 @@ function SupportFooter() {
   return (
     <footer className="flex items-center justify-between gap-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 py-1.5 text-xs text-slate-500">
       <div>
-        <span>SpiceLens · open source (MIT)</span>
+        <span>SpiceLens · open source (AGPL v3)</span>
       </div>
       <div className="flex items-center gap-3">
         <span className="text-slate-400 dark:text-slate-600">Like this tool?</span>
