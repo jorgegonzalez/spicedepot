@@ -90,7 +90,7 @@ The Rust job stubs out `dist/` because `tauri::generate_context!` insists the di
 
 ## Support the project
 
-SpiceLens is free and open source under the AGPL v3 license. If it saves you time, a couple of ways to keep it healthy:
+SpiceLens is free and open source under the Apache 2.0 license. If it saves you time, a couple of ways to keep it healthy:
 
 - ♥ **[GitHub Sponsors](https://github.com/sponsors/jorgegonzalez)** — recurring support, listed in the repo
 - ☕ **[Buy me a coffee](https://buymeacoffee.com/jorgegonzalez)** — one-off thanks
@@ -99,9 +99,7 @@ The same links live in the app's footer.
 
 ## License
 
-**AGPL v3** — see [LICENSE](LICENSE) for the full text and [NOTICE](NOTICE) for the copyright stanza.
-
-The short version: you can use, modify, and redistribute SpiceLens freely. If you distribute it (binary or source), or run a modified version as a hosted service that other people connect to, you have to release your changes under AGPL too. This prevents anyone from taking SpiceLens, sticking a paywall on it, and reselling a closed-source fork.
+**Apache 2.0** — see [LICENSE](LICENSE) for the full text and [NOTICE](NOTICE) for the copyright stanza. Same license SpiceDB itself uses, no surprises.
 
 ## Contributing
 
