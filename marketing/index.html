@@ -72,9 +72,21 @@
       ></div>
 
       <div class="container-narrow relative pt-16 pb-24 md:pt-24 md:pb-32">
-        <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 text-xs text-slate-300">
-          <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-          v0.1 — open beta, MIT licensed
+        <div class="mb-6 flex flex-wrap items-center gap-2">
+          <span class="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 text-xs text-slate-300">
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+            v0.1 — open beta, MIT licensed
+          </span>
+          <a
+            href="https://github.com/jorgegonzalez/spicelens/commits"
+            class="inline-flex items-center gap-2 rounded-full border border-emerald-700/40 bg-emerald-950/40 px-3 py-1 text-xs text-emerald-200 transition hover:bg-emerald-950/70"
+          >
+            <span class="relative flex h-1.5 w-1.5">
+              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+            </span>
+            Actively developed in the open
+          </a>
         </div>
         <h1
           class="max-w-4xl text-5xl font-semibold leading-[1.05] tracking-tight md:text-7xl"
@@ -361,6 +373,19 @@
                 <div class="text-sm text-slate-400">
                   macOS universal (Apple Silicon + Intel), Linux x64,
                   Windows x64. Same UI, same features, native everywhere.
+                </div>
+              </div>
+            </li>
+            <li class="surface flex items-start gap-4 p-5">
+              <span class="mt-1 inline-flex h-8 w-8 flex-none items-center justify-center rounded-md bg-amber-500/10 text-amber-400">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </span>
+              <div>
+                <div class="font-medium">Actively maintained</div>
+                <div class="text-sm text-slate-400">
+                  Every fix and feature happens in public on GitHub. New
+                  releases tagged regularly. File an issue and you'll get
+                  a real human, not a queue.
                 </div>
               </div>
             </li>
