@@ -126,6 +126,11 @@ export interface BulkDeleteOutput {
   deleted_at: string | null;
 }
 
+export interface BulkWriteOutput {
+  written_count: number;
+  chunks: number;
+}
+
 export type WatchEvent =
   | {
       kind: "update";
@@ -210,6 +215,16 @@ export const api = {
       connectionId,
       filter,
       limit,
+    }),
+  bulkWriteRelationships: (
+    connectionId: string,
+    operation: WriteOperation,
+    relationships: RelationshipInput[],
+  ) =>
+    invoke<BulkWriteOutput>("bulk_write_relationships", {
+      connectionId,
+      operation,
+      relationships,
     }),
 
   // Watch

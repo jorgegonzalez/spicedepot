@@ -63,6 +63,7 @@ pub fn run() {
             commands::lookup::lookup_subjects,
             commands::relationships::read_relationships,
             commands::relationships::write_relationship,
+            commands::relationships::bulk_write_relationships,
             commands::relationships::bulk_delete_relationships,
             commands::watch::watch_start,
             commands::watch::watch_stop,

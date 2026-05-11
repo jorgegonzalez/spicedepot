@@ -30,7 +30,7 @@ pub struct RelationshipFilterInput {
 }
 
 /// One concrete relationship — used as the payload for create/touch/delete.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RelationshipInput {
     pub resource_type: String,
     pub resource_id: String,
@@ -136,6 +136,64 @@ pub async fn write_relationship(
             })
             .await?;
         Ok(())
+    }
+    .await)
+}
+
+/// SpiceDB caps relationship updates per WriteRelationships call. The
+/// default server config is `MaximumUpdatesPerWrite: 1000`; we use 500 to
+/// stay safely under that and to keep individual gRPC payloads small.
+const BULK_WRITE_CHUNK: usize = 500;
+
+#[derive(Debug, serde::Serialize)]
+pub struct BulkWriteOutput {
+    pub written_count: u32,
+    pub chunks: u32,
+}
+
+/// Bulk-write a batch of relationships under a single operation kind
+/// (create / touch / delete). Used by the CSV import flow.
+///
+/// Chunks the request server-side so the user doesn't need to think about
+/// SpiceDB's per-write limit. A 50,000-row import becomes 100 gRPC calls.
+#[tauri::command]
+pub async fn bulk_write_relationships(
+    state: State<'_, AppState>,
+    connection_id: String,
+    operation: WriteOperation,
+    relationships: Vec<RelationshipInput>,
+) -> AppResult<BulkWriteOutput> {
+    super::log_err(async {
+        if relationships.is_empty() {
+            return Ok(BulkWriteOutput { written_count: 0, chunks: 0 });
+        }
+        let client = client_for(&state, &connection_id).await?;
+        let proto_op: RelationshipOperation = operation.into();
+        let total = relationships.len() as u32;
+        let mut chunks = 0u32;
+
+        for chunk in relationships.chunks(BULK_WRITE_CHUNK) {
+            let updates: Vec<RelationshipUpdate> = chunk
+                .iter()
+                .cloned()
+                .map(|r| RelationshipUpdate {
+                    operation: proto_op as i32,
+                    relationship: Some(input_to_relationship(r)),
+                })
+                .collect();
+            client
+                .write_relationships(WriteRelationshipsRequest {
+                    updates,
+                    optional_preconditions: Vec::new(),
+                    optional_transaction_metadata: None,
+                })
+                .await?;
+            chunks += 1;
+        }
+        Ok(BulkWriteOutput {
+            written_count: total,
+            chunks,
+        })
     }
     .await)
 }

@@ -1,8 +1,9 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   api,
   BulkDeleteOutput,
+  BulkWriteOutput,
   ReadRelationshipsOutput,
   RelationshipFilterInput,
   RelationshipInput,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/api";
 import { useActiveConnection } from "@/lib/store";
 import { Banner, Button, Field, Input } from "@/components/ui";
+import { downloadText, formatCsv, parseCsv } from "@/lib/csv";
 
 const emptyFilter: RelationshipFilterInput = {
   resource_type: "",
@@ -61,6 +63,12 @@ export function RelationshipsPage() {
   });
 
   const [bulkResult, setBulkResult] = useState<BulkDeleteOutput | null>(null);
+  const [importResult, setImportResult] = useState<{
+    out: BulkWriteOutput;
+    rejected: number;
+  } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const bulkDeleteMut = useMutation<BulkDeleteOutput, Error>({
     mutationFn: () =>
       api.bulkDeleteRelationships(activeConnectionId!, normalizeFilter(filter)),
@@ -74,6 +82,63 @@ export function RelationshipsPage() {
       if (readMut.data || readMut.isPending) readMut.mutate();
     },
   });
+
+  const importMut = useMutation<
+    BulkWriteOutput,
+    Error,
+    { rels: RelationshipInput[]; rejected: number }
+  >({
+    mutationFn: ({ rels }) =>
+      api.bulkWriteRelationships(activeConnectionId!, "touch", rels),
+    onMutate: () => {
+      setBannerError(null);
+      setImportResult(null);
+    },
+    onError: (e) => setBannerError(e.message),
+    onSuccess: (out, vars) => {
+      setImportResult({ out, rejected: vars.rejected });
+      if (readMut.data || readMut.isPending) readMut.mutate();
+    },
+  });
+
+  const onExportCsv = () => {
+    const rows = readMut.data?.items ?? [];
+    if (rows.length === 0) {
+      setBannerError("Read some relationships first — nothing to export.");
+      return;
+    }
+    const csv = formatCsv(rows);
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    downloadText(`spicelens-relationships-${stamp}.csv`, csv);
+  };
+
+  const onImportFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file later
+    if (!file) return;
+    const text = await file.text();
+    const { rows, errors } = parseCsv(text);
+    if (rows.length === 0) {
+      setBannerError(
+        errors.length > 0
+          ? `Parsed 0 rows — ${errors.length} rejected. First error: line ${errors[0].line}: ${errors[0].reason}`
+          : "Parsed 0 rows from the file.",
+      );
+      return;
+    }
+    if (
+      !confirm(
+        `Touch ${rows.length} relationship${rows.length === 1 ? "" : "s"} on this connection?` +
+          (errors.length > 0
+            ? `\n\n${errors.length} row${errors.length === 1 ? "" : "s"} will be skipped (parse errors).`
+            : "") +
+          `\n\nTOUCH is idempotent — existing rows won't error.`,
+      )
+    ) {
+      return;
+    }
+    importMut.mutate({ rels: rows, rejected: errors.length });
+  };
 
   const onBulkDelete = () => {
     if (!filter.resource_type) {
@@ -116,15 +181,40 @@ export function RelationshipsPage() {
           <h1 className="text-sm font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
             Relationships
           </h1>
-          <Button
-            variant={showAddForm ? "ghost" : "secondary"}
-            onClick={() => {
-              setShowAddForm((v) => !v);
-              if (showAddForm) setNewRel(emptyRelationship);
-            }}
-          >
-            {showAddForm ? "Cancel add" : "+ Add relationship"}
-          </Button>
+          <div className="flex gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,text/csv,text/plain"
+              onChange={onImportFileChosen}
+              className="hidden"
+            />
+            <Button
+              variant="ghost"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importMut.isPending}
+              title="Import a CSV of relationships (TOUCH semantics)"
+            >
+              {importMut.isPending ? "Importing…" : "Import CSV"}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={onExportCsv}
+              disabled={!readMut.data || readMut.data.items.length === 0}
+              title="Download the current read result as CSV"
+            >
+              Export CSV
+            </Button>
+            <Button
+              variant={showAddForm ? "ghost" : "secondary"}
+              onClick={() => {
+                setShowAddForm((v) => !v);
+                if (showAddForm) setNewRel(emptyRelationship);
+              }}
+            >
+              {showAddForm ? "Cancel add" : "+ Add relationship"}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -257,6 +347,21 @@ export function RelationshipsPage() {
                 {bulkResult.deleted_at}
               </span>
             )}
+          </Banner>
+        </div>
+      )}
+
+      {importResult && (
+        <div className="p-3">
+          <Banner tone="success">
+            Imported {importResult.out.written_count}{" "}
+            {importResult.out.written_count === 1
+              ? "relationship"
+              : "relationships"}{" "}
+            in {importResult.out.chunks}{" "}
+            {importResult.out.chunks === 1 ? "batch" : "batches"}
+            {importResult.rejected > 0 &&
+              ` · ${importResult.rejected} row${importResult.rejected === 1 ? "" : "s"} skipped (parse errors)`}
           </Banner>
         </div>
       )}

@@ -1118,4 +1118,107 @@ mod tests {
             assert_eq!(subject_id.as_deref(), Some("bob"));
         }
     }
+
+    /// Bulk import: TOUCH a batch larger than the per-call chunk size and
+    /// verify SpiceDB has all rows after the call returns. Exercises the
+    /// chunking loop in `commands::relationships::bulk_write_relationships`
+    /// indirectly through repeated WriteRelationships calls.
+    #[tokio::test]
+    #[ignore]
+    async fn bulk_write_relationships_chunked() {
+        use crate::spicedb::proto::authzed::api::v1::{
+            relationship_update::Operation as RelOp, ObjectReference, Relationship,
+            RelationshipUpdate, SubjectReference, WriteRelationshipsRequest,
+        };
+        use crate::spicedb::proto::{
+            Consistency, ConsistencyRequirement, ReadRelationshipsRequest,
+            RelationshipFilter,
+        };
+
+        let endpoint = std::env::var("SPICEDB_TEST_ENDPOINT")
+            .expect("set SPICEDB_TEST_ENDPOINT");
+        let token = std::env::var("SPICEDB_TEST_TOKEN")
+            .expect("set SPICEDB_TEST_TOKEN");
+        let client = SpiceDbClient::connect(DialConfig {
+            endpoint,
+            insecure: true,
+            token,
+        })
+        .await
+        .expect("connect");
+
+        client
+            .write_schema(
+                "definition user {}\n\
+                 definition document {\n\
+                     relation viewer: user\n\
+                 }\n"
+                .into(),
+            )
+            .await
+            .expect("write_schema");
+        reset_documents(&client).await;
+
+        // Write 1200 relationships split across two chunks (the production
+        // command chunks at 500; we use the raw client here and chunk by hand
+        // at the same size to mirror the path).
+        let total = 1200;
+        let make = |i: u32| Relationship {
+            resource: Some(ObjectReference {
+                object_type: "document".into(),
+                object_id: format!("bulk-{i}"),
+            }),
+            relation: "viewer".into(),
+            subject: Some(SubjectReference {
+                object: Some(ObjectReference {
+                    object_type: "user".into(),
+                    object_id: "alice".into(),
+                }),
+                optional_relation: String::new(),
+            }),
+            optional_caveat: None,
+            optional_expires_at: None,
+        };
+
+        for chunk_start in (0..total).step_by(500) {
+            let updates: Vec<RelationshipUpdate> = (chunk_start
+                ..(chunk_start + 500).min(total))
+                .map(|i| RelationshipUpdate {
+                    operation: RelOp::Touch as i32,
+                    relationship: Some(make(i)),
+                })
+                .collect();
+            client
+                .write_relationships(WriteRelationshipsRequest {
+                    updates,
+                    optional_preconditions: Vec::new(),
+                    optional_transaction_metadata: None,
+                })
+                .await
+                .expect("chunk write");
+        }
+
+        let all = client
+            .read_relationships(ReadRelationshipsRequest {
+                consistency: Some(Consistency {
+                    requirement: Some(ConsistencyRequirement::FullyConsistent(true)),
+                }),
+                relationship_filter: Some(RelationshipFilter {
+                    resource_type: "document".into(),
+                    optional_resource_id: String::new(),
+                    optional_relation: String::new(),
+                    optional_resource_id_prefix: "bulk-".into(),
+                    optional_subject_filter: None,
+                }),
+                optional_limit: 0,
+                optional_cursor: None,
+            })
+            .await
+            .expect("read after bulk");
+        assert_eq!(
+            all.len(),
+            total as usize,
+            "expected all {total} bulk rows to be present"
+        );
+    }
 }

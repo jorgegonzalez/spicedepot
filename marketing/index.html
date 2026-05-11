@@ -221,9 +221,10 @@
             Every SpiceDB API, in one window.
           </h2>
           <p class="mt-4 text-slate-400">
-            Six pages cover the six things you actually do with SpiceDB.
-            Forms, tables, and a live stream — no YAML to write, no zed CLI
-            invocations to remember.
+            Six pages covering schema, relationships, checks, lookups, and
+            a live watch stream — plus CSV import / export and a theme
+            toggle. Forms, tables, and a streaming log; no YAML to write,
+            no zed invocations to remember.
           </p>
         </div>
 
@@ -305,6 +306,33 @@
               straight to the OS keychain — Keychain on macOS, Credential
               Manager on Windows, Secret Service on Linux. Never written to
               disk.
+            </p>
+          </article>
+
+          <!-- 7 CSV -->
+          <article class="surface p-6">
+            <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-teal-500/10 text-teal-400">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+            </div>
+            <h3 class="text-lg font-semibold">CSV import &amp; export</h3>
+            <p class="mt-2 text-sm text-slate-400">
+              Bulk-load thousands of relationships from a CSV (TOUCH
+              semantics, chunked under SpiceDB's per-write limit) and dump
+              the current filter result back out the same way. Round-trip
+              between environments without writing a script.
+            </p>
+          </article>
+
+          <!-- 8 Theme -->
+          <article class="surface p-6">
+            <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+            </div>
+            <h3 class="text-lg font-semibold">Dark &amp; light themes</h3>
+            <p class="mt-2 text-sm text-slate-400">
+              Toggle in the header. Preference persisted across launches.
+              CodeMirror swaps its color scheme too, so the schema editor
+              looks correct in both modes.
             </p>
           </article>
         </div>
@@ -400,7 +428,7 @@
         <dl class="grid grid-cols-2 gap-y-10 text-center md:grid-cols-4">
           <div>
             <dt class="text-sm uppercase tracking-widest text-slate-500">SpiceDB APIs</dt>
-            <dd class="mt-2 text-4xl font-semibold text-white">6 / 6</dd>
+            <dd class="mt-2 text-4xl font-semibold text-white">8 / 8</dd>
             <dd class="mt-1 text-sm text-slate-400">Schema, Permissions, Watch, full coverage</dd>
           </div>
           <div>
@@ -495,10 +523,11 @@
               <span class="text-slate-500 group-open:rotate-180 transition">▾</span>
             </summary>
             <p class="mt-3 text-slate-400">
-              Single-row create / touch / delete works today through the
-              relationship browser, plus bulk delete by filter. Bulk CSV
-              import / export is on the roadmap — file an issue if you'd
-              like it prioritized.
+              Yes. The Relationships page has Import CSV and Export CSV
+              buttons. Imports use TOUCH semantics (idempotent — existing
+              rows don't error) and chunk automatically under SpiceDB's
+              per-write limit, so a 50,000-row file just works. The format
+              is plain CSV with one row per relationship.
             </p>
           </details>
 
