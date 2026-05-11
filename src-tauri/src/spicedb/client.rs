@@ -154,7 +154,7 @@ fn _coerce_status(s: Status) -> AppError {
 
 #[cfg(test)]
 mod tests {
-    use super::build_uri;
+    use super::{build_uri, DialConfig, SpiceDbClient};
 
     #[test]
     fn host_port_insecure_becomes_http() {
@@ -190,5 +190,62 @@ mod tests {
     fn scheme_flag_mismatch_errors() {
         assert!(build_uri("https://example.com:443", true).is_err());
         assert!(build_uri("http://example.com:50051", false).is_err());
+    }
+
+    /// End-to-end test against a live SpiceDB. Skipped unless
+    /// `SPICEDB_TEST_ENDPOINT` (and `SPICEDB_TEST_TOKEN`) are set, so it
+    /// doesn't run in plain `cargo test`.
+    ///
+    ///   SPICEDB_TEST_ENDPOINT=localhost:50051 \
+    ///   SPICEDB_TEST_TOKEN=spicelens-test-key \
+    ///   cargo test -- --ignored insecure_roundtrip
+    #[tokio::test]
+    #[ignore]
+    async fn insecure_roundtrip() {
+        let endpoint = std::env::var("SPICEDB_TEST_ENDPOINT")
+            .expect("set SPICEDB_TEST_ENDPOINT, e.g. localhost:50051");
+        let token = std::env::var("SPICEDB_TEST_TOKEN")
+            .expect("set SPICEDB_TEST_TOKEN to the SpiceDB preshared key");
+
+        let client = SpiceDbClient::connect(DialConfig {
+            endpoint,
+            insecure: true,
+            token,
+        })
+        .await
+        .expect("connect");
+
+        // Empty schema should come back as NotFound, which our code surfaces as
+        // a clean error from read_schema. The Tauri command handler turns that
+        // into an empty string; here we just want to verify the wire works.
+        let initial = client.read_schema().await;
+        match &initial {
+            Ok(_) => {} // server already had a schema (re-running test) — fine
+            Err(crate::error::AppError::Grpc { code, .. })
+                if *code == tonic::Code::NotFound => {}
+            Err(e) => panic!("unexpected initial read_schema error: {e}"),
+        }
+
+        // Write a known schema, then read it back and verify equality.
+        let schema = "definition user {}\n\
+                      definition document {\n\
+                          relation viewer: user\n\
+                          permission view = viewer\n\
+                      }\n";
+        client
+            .write_schema(schema.to_string())
+            .await
+            .expect("write_schema");
+
+        let resp = client.read_schema().await.expect("read_schema after write");
+        assert!(
+            resp.schema_text.contains("definition document"),
+            "schema text did not round-trip: {:?}",
+            resp.schema_text
+        );
+
+        // Ping should now succeed with the "schema present" branch.
+        let msg = client.ping().await.expect("ping");
+        assert!(msg.contains("Schema present"), "ping returned: {msg}");
     }
 }
