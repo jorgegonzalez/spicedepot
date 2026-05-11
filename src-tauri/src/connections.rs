@@ -18,6 +18,9 @@ use tauri_plugin_store::StoreExt;
 
 const STORE_FILE: &str = "connections.json";
 const STORE_KEY: &str = "connections";
+/// Must match the `identifier` in `tauri.conf.json` so the keychain entry
+/// namespace stays stable across builds. If you rename the bundle, rename
+/// here too — otherwise existing users' tokens become orphaned.
 const KEYRING_SERVICE: &str = "dev.spicelens.app";
 
 /// Public-facing connection record. Token never round-trips through this struct.
@@ -159,18 +162,23 @@ impl ConnectionStore {
         Ok(())
     }
 
-    pub async fn token(&self, id: &str) -> AppResult<String> {
-        let id_owned = id.to_string();
-        let res = tokio::task::spawn_blocking(move || {
-            keyring::Entry::new(KEYRING_SERVICE, &id_owned)?.get_password()
-        })
-        .await
-        .map_err(|e| AppError::Other(format!("keychain task: {e}")))?;
-        match res {
-            Ok(t) => Ok(t),
-            Err(keyring::Error::NoEntry) => Ok(String::new()),
-            Err(e) => Err(AppError::from(e)),
-        }
+}
+
+/// Read a stored token off the Tokio runtime. Free function so callers can
+/// invoke it without holding the `ConnectionStore` mutex.
+///
+/// Missing entry → returns `Ok("")` (legitimate for anonymous SpiceDB).
+pub async fn read_token(id: &str) -> AppResult<String> {
+    let id_owned = id.to_string();
+    let res = tokio::task::spawn_blocking(move || {
+        keyring::Entry::new(KEYRING_SERVICE, &id_owned)?.get_password()
+    })
+    .await
+    .map_err(|e| AppError::Other(format!("keychain task: {e}")))?;
+    match res {
+        Ok(t) => Ok(t),
+        Err(keyring::Error::NoEntry) => Ok(String::new()),
+        Err(e) => Err(AppError::from(e)),
     }
 }
 

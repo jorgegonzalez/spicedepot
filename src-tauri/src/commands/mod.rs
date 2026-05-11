@@ -7,17 +7,22 @@ use crate::AppState;
 use tauri::State;
 
 /// Build a SpiceDB client for a known connection id, pulling the token out of
-/// the keychain. Centralized here so every command uses the same path. The
-/// store lock is released before the (potentially slow) gRPC dial so other
-/// commands aren't starved.
+/// the keychain. Centralized here so every command uses the same path.
+///
+/// Lock discipline: we read the (fast) JSON-backed connection record under the
+/// store mutex, then **drop the lock** before doing the keychain read or the
+/// gRPC dial. Both of those can block for noticeable time (keychain auth
+/// prompts on macOS; network round-trips on dial), and we don't want to
+/// serialize unrelated commands behind them.
 pub(crate) async fn client_for(
     state: &State<'_, AppState>,
     connection_id: &str,
 ) -> AppResult<SpiceDbClient> {
-    let store = state.connections.lock().await;
-    let conn = store.get(connection_id)?;
-    let token = store.token(connection_id).await?;
-    drop(store);
+    let conn = {
+        let store = state.connections.lock().await;
+        store.get(connection_id)?
+    };
+    let token = crate::connections::read_token(connection_id).await?;
 
     SpiceDbClient::connect(DialConfig {
         endpoint: conn.endpoint,
