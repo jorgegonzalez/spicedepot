@@ -1,4 +1,5 @@
 pub mod connections;
+pub mod permissions;
 pub mod schema;
 
 use crate::error::AppResult;

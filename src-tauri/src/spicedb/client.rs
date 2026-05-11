@@ -10,8 +10,8 @@
 
 use crate::error::{AppError, AppResult};
 use crate::spicedb::proto::{
-    PermissionsServiceClient, ReadSchemaRequest, ReadSchemaResponse, SchemaServiceClient,
-    WriteSchemaRequest,
+    CheckPermissionRequest, CheckPermissionResponse, PermissionsServiceClient,
+    ReadSchemaRequest, ReadSchemaResponse, SchemaServiceClient, WriteSchemaRequest,
 };
 use http::Uri;
 use tonic::metadata::MetadataValue;
@@ -70,7 +70,6 @@ impl SpiceDbClient {
         SchemaServiceClient::new(self.channel.clone())
     }
 
-    #[allow(dead_code)] // wired in once permission checker lands
     pub fn permissions(&self) -> PermissionsServiceClient<Channel> {
         PermissionsServiceClient::new(self.channel.clone())
     }
@@ -86,6 +85,15 @@ impl SpiceDbClient {
         svc.write_schema(self.auth(WriteSchemaRequest { schema }))
             .await?;
         Ok(())
+    }
+
+    pub async fn check_permission(
+        &self,
+        req: CheckPermissionRequest,
+    ) -> AppResult<CheckPermissionResponse> {
+        let mut svc = self.permissions();
+        let resp = svc.check_permission(self.auth(req)).await?;
+        Ok(resp.into_inner())
     }
 
     /// Best-effort liveness check. We try `ReadSchema` and treat `NOT_FOUND`
@@ -247,5 +255,143 @@ mod tests {
         // Ping should now succeed with the "schema present" branch.
         let msg = client.ping().await.expect("ping");
         assert!(msg.contains("Schema present"), "ping returned: {msg}");
+    }
+
+    /// End-to-end permission check: write a schema, write a relationship via
+    /// the low-level gRPC API, then verify `check_permission` returns
+    /// HasPermission for the related subject and NoPermission for an
+    /// unrelated one. Mirrors the production code path through
+    /// `SpiceDbClient::check_permission`.
+    #[tokio::test]
+    #[ignore]
+    async fn check_permission_with_relationship() {
+        use crate::spicedb::proto::authzed::api::v1::{
+            relationship_update::Operation as RelOp, ObjectReference, Relationship,
+            RelationshipUpdate, SubjectReference, WriteRelationshipsRequest,
+        };
+        use crate::spicedb::proto::{CheckPermissionRequest, Permissionship};
+
+        let endpoint = std::env::var("SPICEDB_TEST_ENDPOINT")
+            .expect("set SPICEDB_TEST_ENDPOINT");
+        let token = std::env::var("SPICEDB_TEST_TOKEN")
+            .expect("set SPICEDB_TEST_TOKEN");
+
+        let client = SpiceDbClient::connect(DialConfig {
+            endpoint,
+            insecure: true,
+            token,
+        })
+        .await
+        .expect("connect");
+
+        // 1. Write a schema that defines a `view` permission backed by a
+        //    `viewer` relation on `document`.
+        client
+            .write_schema(
+                "definition user {}\n\
+                 definition document {\n\
+                     relation viewer: user\n\
+                     permission view = viewer\n\
+                 }\n"
+                .into(),
+            )
+            .await
+            .expect("write_schema");
+
+        // 2. Write a single relationship: document:doc1#viewer -> user:alice.
+        let mut perms = client.permissions();
+        let relationship_to_alice = Relationship {
+            resource: Some(ObjectReference {
+                object_type: "document".into(),
+                object_id: "doc1".into(),
+            }),
+            relation: "viewer".into(),
+            subject: Some(SubjectReference {
+                object: Some(ObjectReference {
+                    object_type: "user".into(),
+                    object_id: "alice".into(),
+                }),
+                optional_relation: String::new(),
+            }),
+            optional_caveat: None,
+            optional_expires_at: None,
+        };
+        let mut req = tonic::Request::new(WriteRelationshipsRequest {
+            updates: vec![RelationshipUpdate {
+                operation: RelOp::Touch as i32,
+                relationship: Some(relationship_to_alice),
+            }],
+            optional_preconditions: Vec::new(),
+            optional_transaction_metadata: None,
+        });
+        req.metadata_mut()
+            .insert("authorization", client.bearer.clone());
+        perms.write_relationships(req).await.expect("write_relationships");
+
+        // 3. alice should now have `view` on doc1.
+        let allowed = client
+            .check_permission(CheckPermissionRequest {
+                consistency: Some(crate::spicedb::proto::Consistency {
+                    requirement: Some(
+                        crate::spicedb::proto::ConsistencyRequirement::FullyConsistent(
+                            true,
+                        ),
+                    ),
+                }),
+                resource: Some(ObjectReference {
+                    object_type: "document".into(),
+                    object_id: "doc1".into(),
+                }),
+                permission: "view".into(),
+                subject: Some(SubjectReference {
+                    object: Some(ObjectReference {
+                        object_type: "user".into(),
+                        object_id: "alice".into(),
+                    }),
+                    optional_relation: String::new(),
+                }),
+                context: None,
+                with_tracing: false,
+            })
+            .await
+            .expect("check alice");
+        assert_eq!(
+            allowed.permissionship(),
+            Permissionship::HasPermission,
+            "alice should have view on doc1"
+        );
+
+        // 4. bob, who has no relationship, should be denied.
+        let denied = client
+            .check_permission(CheckPermissionRequest {
+                consistency: Some(crate::spicedb::proto::Consistency {
+                    requirement: Some(
+                        crate::spicedb::proto::ConsistencyRequirement::FullyConsistent(
+                            true,
+                        ),
+                    ),
+                }),
+                resource: Some(ObjectReference {
+                    object_type: "document".into(),
+                    object_id: "doc1".into(),
+                }),
+                permission: "view".into(),
+                subject: Some(SubjectReference {
+                    object: Some(ObjectReference {
+                        object_type: "user".into(),
+                        object_id: "bob".into(),
+                    }),
+                    optional_relation: String::new(),
+                }),
+                context: None,
+                with_tracing: false,
+            })
+            .await
+            .expect("check bob");
+        assert_eq!(
+            denied.permissionship(),
+            Permissionship::NoPermission,
+            "bob should be denied"
+        );
     }
 }

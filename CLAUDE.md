@@ -169,9 +169,13 @@ The next features (permission checker, relationship browser, lookup) follow the 
 
 1. ✅ Connection manager
 2. ✅ Schema read/write
-3. ☐ Permission checker (`CheckPermission`)
+3. ✅ Permission checker (`CheckPermission`)
 4. ☐ Relationship browser (`ReadRelationships` / `WriteRelationships` / `DeleteRelationships`)
 5. ☐ Lookup (`LookupResources`, `LookupSubjects`)
 6. ☐ Watch stream viewer
 
 Each gets its own page + commands; the gRPC client already exposes `permissions()`. For the relationship browser, plan on streaming responses — wire a Tokio mpsc channel to a Tauri `Channel<T>` so the UI can render rows incrementally.
+
+## CheckPermission: consistency choice
+
+`commands::permissions::check_permission` sends `Consistency = FullyConsistent(true)` on every call. SpiceDB's default (`MinimizeLatency`) reads from any snapshot and can return a stale result — surprising in an interactive tool where the user has just written a relationship and is testing the effect. The integration test `check_permission_with_relationship` exercises this exact ordering and would fail without `FullyConsistent`. If lookup/relationship-browser commands need different consistency semantics, set them per-command rather than relaxing this default.

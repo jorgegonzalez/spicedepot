@@ -51,6 +51,7 @@ pub fn run() {
             commands::connections::test_connection,
             commands::schema::read_schema,
             commands::schema::write_schema,
+            commands::permissions::check_permission,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

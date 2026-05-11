@@ -7,6 +7,7 @@ import { useActiveConnection } from "@/lib/store";
 const navItems = [
   { to: "/connections", label: "Connections" },
   { to: "/schema", label: "Schema" },
+  { to: "/permissions", label: "Check" },
 ];
 
 export function AppShell() {

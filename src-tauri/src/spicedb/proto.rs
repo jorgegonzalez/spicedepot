@@ -26,7 +26,10 @@ pub mod google {
 
 // Convenience re-exports for the parts we use elsewhere.
 pub use authzed::api::v1::{
+    check_permission_response::Permissionship,
+    consistency::Requirement as ConsistencyRequirement,
     permissions_service_client::PermissionsServiceClient,
     schema_service_client::SchemaServiceClient,
-    ReadSchemaRequest, ReadSchemaResponse, WriteSchemaRequest,
+    CheckPermissionRequest, CheckPermissionResponse, Consistency, ObjectReference,
+    ReadSchemaRequest, ReadSchemaResponse, SubjectReference, WriteSchemaRequest,
 };

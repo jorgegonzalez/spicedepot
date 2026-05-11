@@ -23,6 +23,27 @@ export interface SchemaResult {
   read_at: string | null;
 }
 
+export interface CheckPermissionInput {
+  resource_type: string;
+  resource_id: string;
+  permission: string;
+  subject_type: string;
+  subject_id: string;
+  subject_relation?: string;
+}
+
+export type Permissionship =
+  | "has_permission"
+  | "no_permission"
+  | "conditional_permission"
+  | "unspecified";
+
+export interface CheckPermissionOutput {
+  permissionship: Permissionship;
+  checked_at: string | null;
+  missing_context: string[];
+}
+
 export const api = {
   // Connections
   listConnections: () => invoke<Connection[]>("list_connections"),
@@ -42,4 +63,11 @@ export const api = {
     invoke<SchemaResult>("read_schema", { connectionId }),
   writeSchema: (connectionId: string, schema: string) =>
     invoke<void>("write_schema", { connectionId, schema }),
+
+  // Permissions
+  checkPermission: (connectionId: string, input: CheckPermissionInput) =>
+    invoke<CheckPermissionOutput>("check_permission", {
+      connectionId,
+      input,
+    }),
 };
