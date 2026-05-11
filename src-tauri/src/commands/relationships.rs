@@ -39,7 +39,7 @@ pub struct RelationshipInput {
     pub subject_relation: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WriteOperation {
     /// CREATE: errors if the relationship already exists.
@@ -63,7 +63,7 @@ impl From<WriteOperation> for RelationshipOperation {
 
 /// Flat shape we send to the frontend — easier to render in a table than the
 /// nested proto type.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct RelationshipRow {
     pub resource_type: String,
     pub resource_id: String,

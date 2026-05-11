@@ -1,4 +1,4 @@
-import { invoke } from "./tauri";
+import { Channel, invoke } from "./tauri";
 
 /** Mirrors the `Connection` struct in `src-tauri/src/connections.rs`. */
 export interface Connection {
@@ -120,6 +120,21 @@ export interface ReadRelationshipsOutput {
 
 export type WriteOperation = "create" | "touch" | "delete";
 
+export type WatchEvent =
+  | {
+      kind: "update";
+      operation: WriteOperation;
+      relationship: RelationshipRow;
+      at: string | null;
+    }
+  | { kind: "schema_changed"; at: string | null }
+  | { kind: "ended" }
+  | { kind: "error"; message: string };
+
+export interface WatchStartInput {
+  object_types: string[];
+}
+
 export const api = {
   // Connections
   listConnections: () => invoke<Connection[]>("list_connections"),
@@ -180,4 +195,18 @@ export const api = {
       operation,
       relationship,
     }),
+
+  // Watch
+  watchStart: (
+    connectionId: string,
+    input: WatchStartInput,
+    onEvent: Channel<WatchEvent>,
+  ) =>
+    invoke<string>("watch_start", {
+      connectionId,
+      input,
+      onEvent,
+    }),
+  watchStop: (watchId: string) =>
+    invoke<void>("watch_stop", { watchId }),
 };

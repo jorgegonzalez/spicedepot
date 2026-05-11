@@ -3,6 +3,7 @@ pub mod lookup;
 pub mod permissions;
 pub mod relationships;
 pub mod schema;
+pub mod watch;
 
 use crate::error::AppResult;
 use crate::spicedb::{client::DialConfig, SpiceDbClient};

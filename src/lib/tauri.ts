@@ -1,4 +1,4 @@
-import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { Channel, invoke as tauriInvoke } from "@tauri-apps/api/core";
 
 /**
  * Typed wrapper around Tauri `invoke`. The Rust side returns
@@ -18,3 +18,5 @@ export async function invoke<T>(
     throw new Error(JSON.stringify(e));
   }
 }
+
+export { Channel };

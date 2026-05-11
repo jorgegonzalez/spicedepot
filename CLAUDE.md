@@ -172,10 +172,10 @@ The next features (permission checker, relationship browser, lookup) follow the 
 3. ✅ Permission checker (`CheckPermission`)
 4. ✅ Relationship browser (`ReadRelationships` + single-row `WriteRelationships` create/touch/delete)
 5. ✅ Lookup (`LookupResources`, `LookupSubjects`)
-6. ☐ Watch stream viewer
+6. ✅ Watch stream viewer (`WatchService.Watch`)
 7. ☐ Bulk `DeleteRelationships` (delete-by-filter) — scoped out of #4 for v1
 
-Each gets its own page + commands; the gRPC client exposes `permissions()` for everything in the authz family. The current implementation drains streaming RPCs into a Vec inside Rust before returning — fine for the SpiceDB-default 1000-result cap. When we want incremental rendering or "load more" pagination, swap the Vec for a `tauri::ipc::Channel<T>`.
+Each gets its own page + commands; the gRPC client exposes `permissions()` for everything in the authz family. Most streaming RPCs (lookup, read-relationships) drain into a Vec inside Rust before returning — fine for the SpiceDB-default 1000-result cap. The Watch viewer is the exception: its stream is unbounded, so it uses `tauri::ipc::Channel<WatchEvent>` (see "Watch streaming" below).
 
 ## CheckPermission and Lookup: consistency choice
 
@@ -185,4 +185,17 @@ Every authz read (`CheckPermission`, `LookupResources`, `LookupSubjects`) sends 
 
 `PermissionsService.LookupResources` and `LookupSubjects` are server-streaming RPCs. The current implementation drains the stream into a `Vec` inside `SpiceDbClient::{lookup_resources, lookup_subjects}` before returning, so the Tauri command is a single round-trip from the frontend's perspective. SpiceDB caps server-side response counts (default 1000) and our optional `limit` field can request fewer.
 
-If/when we want progressive rendering (large result sets, "load more" pagination, etc.), swap the `Vec` for a `tauri::ipc::Channel<T>`: spawn the streaming RPC in a Tokio task and send each item as it arrives. The frontend `useMutation` would become a subscription pattern. Not worth the complexity yet.
+If/when we want progressive rendering (large result sets, "load more" pagination, etc.), swap the `Vec` for a `tauri::ipc::Channel<T>`: spawn the streaming RPC in a Tokio task and send each item as it arrives. The frontend `useMutation` would become a subscription pattern. Not worth the complexity for these unless the result-cap becomes a real problem.
+
+## Watch streaming
+
+`WatchService.Watch` is the one feature where the Vec-drain pattern doesn't fit — the stream is unbounded by design. The plumbing:
+
+1. **Rust side** — `SpiceDbClient::watch_stream` returns the raw `tonic::Streaming<WatchResponse>` rather than draining it. The `commands::watch::watch_start` command accepts a `tauri::ipc::Channel<WatchEvent>` parameter, spawns a Tokio task that drives the stream and forwards each response (one event per `RelationshipUpdate`) to the channel.
+2. **Lifecycle** — `watch_start` returns a fresh UUID, and stores the spawned task's `AbortHandle` in `AppState.watches: Mutex<HashMap<String, AbortHandle>>`. `watch_stop` looks up the handle and calls `.abort()`, which drops the stream and cancels the gRPC call. The task also self-removes its entry on terminal end / error so completed handles don't accumulate.
+3. **Frontend side** — `WatchPage` constructs a `new Channel<WatchEvent>()` via `@tauri-apps/api/core`, attaches `channel.onmessage`, and passes the channel as the `onEvent` arg to `invoke('watch_start', ...)`. Unmounting the page (or switching connections) calls `watch_stop`.
+4. **Event shape** — `WatchEvent` is a tagged union (`#[serde(tag = "kind")]`) with `update | schema_changed | ended | error` variants. The `update` variant flattens the proto `Relationship` into the same `RelationshipRow` the relationship browser uses, so the same TS type covers both pages.
+
+The integration test (`watch_receives_updates`) exercises the full path against a live SpiceDB: open the stream, write a relationship from a second task, assert the write lands in the stream within 5 seconds, then drop the stream to verify cancellation.
+
+This is the template for any future server-streaming feature where the stream is conceptually unbounded.

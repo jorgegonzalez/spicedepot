@@ -15,13 +15,18 @@ mod connections;
 mod error;
 mod spicedb;
 
+use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::Manager;
 use tokio::sync::Mutex;
+use tokio::task::AbortHandle;
 
 /// App-wide state, mounted on the Tauri builder via `.manage()`.
 pub struct AppState {
     pub connections: Arc<Mutex<connections::ConnectionStore>>,
+    /// Active Watch streams keyed by an opaque watch_id. Aborting the handle
+    /// drops the tonic stream which cancels the gRPC call.
+    pub watches: Arc<Mutex<HashMap<String, AbortHandle>>>,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -39,6 +44,7 @@ pub fn run() {
             let store = connections::ConnectionStore::new(app.handle().clone())?;
             app.manage(AppState {
                 connections: Arc::new(Mutex::new(store)),
+                watches: Arc::new(Mutex::new(HashMap::new())),
             });
             Ok(())
         })
@@ -56,6 +62,8 @@ pub fn run() {
             commands::lookup::lookup_subjects,
             commands::relationships::read_relationships,
             commands::relationships::write_relationship,
+            commands::watch::watch_start,
+            commands::watch::watch_stop,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

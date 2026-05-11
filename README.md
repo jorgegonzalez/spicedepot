@@ -11,13 +11,13 @@ A cross-platform desktop GUI for [SpiceDB](https://github.com/authzed/spicedb), 
 - **Permission checker** — interactive `CheckPermission` form with fully-consistent reads (the just-written relationship shows up immediately).
 - **Lookup** — `LookupResources` ("which docs can alice view?") and `LookupSubjects` ("who can view doc1?") via a single page with a tab toggle. Results render as a sortable table.
 - **Relationship browser** — filtered `ReadRelationships` table with per-row delete + an inline form to add single relationships (CREATE or TOUCH).
+- **Watch viewer** — live `WatchService.Watch` stream rendered as a scrolling log of relationship changes (CREATE / TOUCH / DELETE) with optional object-type filter.
 - **Insecure (plaintext) gRPC** — works correctly out of the box, useful for local-dev SpiceDB.
 - TLS gRPC support via `rustls` (no native OpenSSL dependency).
 
 Roadmap:
 
 - Bulk `DeleteRelationships` (delete-by-filter)
-- Watch stream viewer
 
 ## Build from source
 

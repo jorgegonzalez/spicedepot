@@ -10,6 +10,7 @@ const navItems = [
   { to: "/relationships", label: "Relationships" },
   { to: "/permissions", label: "Check" },
   { to: "/lookup", label: "Lookup" },
+  { to: "/watch", label: "Watch" },
 ];
 
 export function AppShell() {

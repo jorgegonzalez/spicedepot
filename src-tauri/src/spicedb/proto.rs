@@ -32,10 +32,11 @@ pub use authzed::api::v1::{
     relationship_update::Operation as RelationshipOperation,
     schema_service_client::SchemaServiceClient,
     subject_filter::RelationFilter as SubjectRelationFilter,
+    watch_service_client::WatchServiceClient,
     CheckPermissionRequest, CheckPermissionResponse, Consistency, LookupResourcesRequest,
     LookupResourcesResponse, LookupSubjectsRequest, LookupSubjectsResponse,
     ObjectReference, ReadRelationshipsRequest, ReadRelationshipsResponse,
     ReadSchemaRequest, ReadSchemaResponse, Relationship, RelationshipFilter,
-    RelationshipUpdate, SubjectFilter, SubjectReference, WriteRelationshipsRequest,
-    WriteRelationshipsResponse, WriteSchemaRequest,
+    RelationshipUpdate, SubjectFilter, SubjectReference, WatchRequest, WatchResponse,
+    WriteRelationshipsRequest, WriteRelationshipsResponse, WriteSchemaRequest,
 };

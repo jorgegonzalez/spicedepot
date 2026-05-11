@@ -5,6 +5,7 @@ import { LookupPage } from "./pages/LookupPage";
 import { PermissionsPage } from "./pages/PermissionsPage";
 import { RelationshipsPage } from "./pages/RelationshipsPage";
 import { SchemaPage } from "./pages/SchemaPage";
+import { WatchPage } from "./pages/WatchPage";
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/permissions" element={<PermissionsPage />} />
         <Route path="/lookup" element={<LookupPage />} />
         <Route path="/relationships" element={<RelationshipsPage />} />
+        <Route path="/watch" element={<WatchPage />} />
       </Route>
     </Routes>
   );
