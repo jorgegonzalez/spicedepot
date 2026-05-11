@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    name: Rust (build + clippy + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system deps (Linux for Tauri)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libsoup-3.0-dev \
+            libdbus-1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # The build script references the frontend's dist/ via tauri.conf.json's
+      # `frontendDist: "../dist"`. Tauri's `generate_context!` macro insists the
+      # path exists at compile time, even though `cargo check` doesn't run Vite.
+      - name: Stub frontend dist (for tauri::generate_context!)
+        run: mkdir -p dist && echo "<html></html>" > dist/index.html
+
+      - name: cargo build
+        working-directory: src-tauri
+        run: cargo build --all-targets --message-format=short
+
+      - name: cargo clippy
+        working-directory: src-tauri
+        run: cargo clippy --no-deps --all-targets -- -D warnings
+
+      - name: cargo test (unit tests only — ignored tests need a running SpiceDB)
+        working-directory: src-tauri
+        run: cargo test --lib
+
+  frontend:
+    name: Frontend (typecheck + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+  integration:
+    name: Integration tests (live SpiceDB)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libsoup-3.0-dev \
+            libdbus-1-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Stub frontend dist
+        run: mkdir -p dist && echo "<html></html>" > dist/index.html
+
+      # GitHub Actions `services:` can't pass a subcommand, and the
+      # authzed/spicedb image's entrypoint is `spicedb` with no default
+      # subcommand — so we run it manually here with `serve`.
+      - name: Start SpiceDB
+        run: |
+          docker run -d --name spicedb \
+            -p 50051:50051 \
+            authzed/spicedb:v1.52.0 \
+            serve \
+              --grpc-preshared-key=spicelens-ci-key \
+              --datastore-engine=memory \
+              --http-enabled=false \
+              --metrics-enabled=false \
+              --dispatch-cluster-enabled=false
+
+      - name: Wait for SpiceDB to accept connections
+        run: |
+          for i in {1..30}; do
+            if nc -z localhost 50051; then
+              echo "SpiceDB reachable"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "SpiceDB never came up; container logs:" >&2
+          docker logs spicedb >&2 || true
+          exit 1
+
+      - name: Run integration tests
+        working-directory: src-tauri
+        env:
+          SPICEDB_TEST_ENDPOINT: localhost:50051
+          SPICEDB_TEST_TOKEN: spicelens-ci-key
+        run: cargo test --lib -- --ignored --test-threads=1 --nocapture
+
+      - name: SpiceDB logs (on failure)
+        if: failure()
+        run: docker logs spicedb || true

@@ -1,0 +1,97 @@
+name: Release
+
+# Triggers when a tag like v0.1.0 is pushed. Builds a Tauri bundle for each
+# platform and uploads the artifacts to a draft GitHub Release tied to the tag.
+#
+# To cut a release:
+#   git tag v0.1.0
+#   git push origin v0.1.0
+#
+# Then go to the GitHub Releases page, edit the draft, and publish.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v0.1.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Universal macOS binary (Apple Silicon + Intel).
+          - platform: macos-latest
+            args: "--target universal-apple-darwin"
+            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+          - platform: ubuntu-22.04
+            args: ""
+            rust-targets: ""
+          - platform: windows-latest
+            args: ""
+            rust-targets: ""
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-targets }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install Linux system deps
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libsoup-3.0-dev \
+            libdbus-1-dev
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build + bundle (Tauri)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.event.inputs.tag || github.ref_name }}
+          releaseName: "SpiceLens ${{ github.event.inputs.tag || github.ref_name }}"
+          releaseBody: |
+            Cross-platform desktop GUI for SpiceDB.
+
+            Downloads:
+              - macOS (universal): `*.dmg`
+              - Linux (x64): `*.AppImage` / `*.deb`
+              - Windows (x64): `*.msi` / `*-setup.exe`
+
+            See the release notes below for changes in this version.
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}

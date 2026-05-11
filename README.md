@@ -2,7 +2,13 @@
 
 A cross-platform desktop GUI for [SpiceDB](https://github.com/authzed/spicedb), built with Tauri 2 + Rust + React.
 
-> Status: **alpha**. Connection manager and schema editor are functional. Permission checking, relationship browsing, and lookup are on the roadmap.
+> Status: **v1 feature-complete, alpha quality**. All planned features ship; UX polish and signed release binaries are next.
+
+## Install
+
+Pre-built binaries land on the [Releases page](https://github.com/your-org/spicelens/releases) (macOS universal `.dmg`, Linux `.AppImage` / `.deb`, Windows `.msi`). Each release is built from the tagged commit by [`.github/workflows/release.yml`](.github/workflows/release.yml).
+
+To build from source, see "Build from source" below.
 
 ## Features
 
@@ -15,9 +21,12 @@ A cross-platform desktop GUI for [SpiceDB](https://github.com/authzed/spicedb), 
 - **Insecure (plaintext) gRPC** — works correctly out of the box, useful for local-dev SpiceDB.
 - TLS gRPC support via `rustls` (no native OpenSSL dependency).
 
-Roadmap:
+Roadmap (post-v1 polish):
 
-- Bulk `DeleteRelationships` (delete-by-filter)
+- Signed release binaries (Apple notarization, Windows code-signing)
+- Caveat context editor in the permission checker
+- "Load more" pagination for lookup / relationships once result sets get big
+- Schema validation feedback before write
 
 ## Build from source
 
@@ -49,6 +58,16 @@ Proto files are vendored under `src-tauri/proto/` for reproducible builds. To re
 ```
 
 The script downloads pinned versions of the [authzed/api](https://github.com/authzed/api) protos and their transitive dependencies. Edit the `*_REF` variables at the top of the script to bump versions.
+
+## CI
+
+Every PR runs three jobs in [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+
+1. **Rust** — `cargo build --all-targets`, `clippy --no-deps -- -D warnings`, `cargo test --lib`
+2. **Frontend** — `pnpm typecheck` + `pnpm build`
+3. **Integration** — spins up SpiceDB v1.52.0 as a service container and runs the `#[ignore]`'d gRPC tests against it (`cargo test --lib -- --ignored`)
+
+The Rust job stubs out `dist/` because `tauri::generate_context!` insists the directory exist at compile time even though `cargo check` doesn't need Vite output.
 
 ## License
 
