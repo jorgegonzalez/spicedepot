@@ -56,6 +56,24 @@ export function SchemaPage() {
     onError: (err: Error) => setSaveError(err.message),
   });
 
+  // Reset all editor state whenever we switch connections. The sync effect
+  // below will then pick up the new connection's schema_text from the query.
+  // Without this, the previous connection's dirty buffer leaks into the next.
+  useEffect(() => {
+    draftRef.current = "";
+    dirtyRef.current = false;
+    lastSubmittedRef.current = null;
+    _setDirty(false);
+    setSaveError(null);
+    setSavedAt(null);
+    if (editorView.current) {
+      const view = editorView.current;
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: "" },
+      });
+    }
+  }, [activeConnectionId]);
+
   // Mount the editor once. We push fresh content via dispatch.
   useEffect(() => {
     if (!editorParent.current || editorView.current) return;

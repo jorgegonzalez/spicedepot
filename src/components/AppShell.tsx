@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -15,6 +16,20 @@ export function AppShell() {
     queryKey: ["connections"],
     queryFn: api.listConnections,
   });
+
+  // The active connection id is persisted in localStorage and can outlive the
+  // connection itself (deleted in a previous session, or wiped from the JSON
+  // store manually). Drop it if it no longer matches a real connection — but
+  // only once the connection list has actually loaded.
+  useEffect(() => {
+    if (
+      connections &&
+      activeConnectionId &&
+      !connections.some((c) => c.id === activeConnectionId)
+    ) {
+      setActiveConnectionId(null);
+    }
+  }, [connections, activeConnectionId, setActiveConnectionId]);
 
   const active =
     connections?.find((c) => c.id === activeConnectionId) ?? null;
