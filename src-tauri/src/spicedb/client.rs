@@ -10,12 +10,13 @@
 
 use crate::error::{AppError, AppResult};
 use crate::spicedb::proto::{
-    CheckPermissionRequest, CheckPermissionResponse, LookupResourcesRequest,
-    LookupResourcesResponse, LookupSubjectsRequest, LookupSubjectsResponse,
-    PermissionsServiceClient, ReadRelationshipsRequest, ReadRelationshipsResponse,
-    ReadSchemaRequest, ReadSchemaResponse, SchemaServiceClient, WatchRequest,
-    WatchResponse, WatchServiceClient, WriteRelationshipsRequest,
-    WriteRelationshipsResponse, WriteSchemaRequest,
+    CheckPermissionRequest, CheckPermissionResponse, DeleteRelationshipsRequest,
+    DeleteRelationshipsResponse, LookupResourcesRequest, LookupResourcesResponse,
+    LookupSubjectsRequest, LookupSubjectsResponse, PermissionsServiceClient,
+    ReadRelationshipsRequest, ReadRelationshipsResponse, ReadSchemaRequest,
+    ReadSchemaResponse, SchemaServiceClient, WatchRequest, WatchResponse,
+    WatchServiceClient, WriteRelationshipsRequest, WriteRelationshipsResponse,
+    WriteSchemaRequest,
 };
 use http::Uri;
 use tonic::metadata::MetadataValue;
@@ -164,6 +165,19 @@ impl SpiceDbClient {
         Ok(resp.into_inner())
     }
 
+    /// Unary. Bulk-deletes every relationship matching the filter (or a
+    /// bounded subset if `optional_limit` + `optional_allow_partial_deletions`
+    /// are set). SpiceDB rejects unbounded calls beyond a server cap; the
+    /// command layer surfaces that error to the UI.
+    pub async fn delete_relationships(
+        &self,
+        req: DeleteRelationshipsRequest,
+    ) -> AppResult<DeleteRelationshipsResponse> {
+        let mut svc = self.permissions();
+        let resp = svc.delete_relationships(self.auth(req)).await?;
+        Ok(resp.into_inner())
+    }
+
     /// Open a Watch stream and return it raw — unlike the lookup/read helpers
     /// we don't drain it into a `Vec` because the watch stream is unbounded.
     /// Callers feed individual `WatchResponse`s into a `tauri::ipc::Channel`
@@ -244,6 +258,30 @@ fn _coerce_status(s: Status) -> AppError {
 #[cfg(test)]
 mod tests {
     use super::{build_uri, DialConfig, SpiceDbClient};
+
+    /// Best-effort cleanup of any document-typed relationships left over from
+    /// previous tests on the shared SpiceDB instance. Tests run sequentially
+    /// (`--test-threads=1`) against a single in-memory SpiceDB and would
+    /// otherwise contaminate each other in alphabetical order.
+    #[cfg(test)]
+    async fn reset_documents(client: &SpiceDbClient) {
+        use crate::spicedb::proto::{DeleteRelationshipsRequest, RelationshipFilter};
+        let _ = client
+            .delete_relationships(DeleteRelationshipsRequest {
+                relationship_filter: Some(RelationshipFilter {
+                    resource_type: "document".into(),
+                    optional_resource_id: String::new(),
+                    optional_relation: String::new(),
+                    optional_resource_id_prefix: String::new(),
+                    optional_subject_filter: None,
+                }),
+                optional_preconditions: Vec::new(),
+                optional_limit: 0,
+                optional_allow_partial_deletions: false,
+                optional_transaction_metadata: None,
+            })
+            .await;
+    }
 
     #[test]
     fn host_port_insecure_becomes_http() {
@@ -378,6 +416,7 @@ mod tests {
             )
             .await
             .expect("write_schema");
+        reset_documents(&client).await;
 
         // 2. Write a single relationship: document:doc1#viewer -> user:alice.
         let mut perms = client.permissions();
@@ -515,6 +554,7 @@ mod tests {
             )
             .await
             .expect("write_schema");
+        reset_documents(&client).await;
 
         // alice can view doc1 and doc2; bob can view doc1 only.
         let rels = [
@@ -658,6 +698,7 @@ mod tests {
             )
             .await
             .expect("write_schema");
+        reset_documents(&client).await;
 
         // Helper to build a Relationship value.
         let rel = |doc: &str, user: &str| Relationship {
@@ -850,6 +891,7 @@ mod tests {
             )
             .await
             .expect("write_schema");
+        reset_documents(&client).await;
 
         // Open the watch stream first so we don't race the write.
         let mut stream = client
@@ -939,5 +981,141 @@ mod tests {
         // must not deliver into this stream (verified implicitly by not
         // panicking after drop).
         drop(stream);
+    }
+
+    /// End-to-end bulk delete: write 4 relationships, bulk-delete the ones
+    /// matching a narrow filter, verify the rest survive.
+    #[tokio::test]
+    #[ignore]
+    async fn bulk_delete_relationships() {
+        use crate::spicedb::proto::authzed::api::v1::{
+            relationship_update::Operation as RelOp, ObjectReference, Relationship,
+            RelationshipUpdate, SubjectReference, WriteRelationshipsRequest,
+        };
+        use crate::spicedb::proto::{
+            Consistency, ConsistencyRequirement, DeleteRelationshipsRequest,
+            ReadRelationshipsRequest, RelationshipFilter, SubjectFilter,
+        };
+
+        let endpoint = std::env::var("SPICEDB_TEST_ENDPOINT")
+            .expect("set SPICEDB_TEST_ENDPOINT");
+        let token = std::env::var("SPICEDB_TEST_TOKEN")
+            .expect("set SPICEDB_TEST_TOKEN");
+
+        let client = SpiceDbClient::connect(DialConfig {
+            endpoint,
+            insecure: true,
+            token,
+        })
+        .await
+        .expect("connect");
+
+        client
+            .write_schema(
+                "definition user {}\n\
+                 definition document {\n\
+                     relation viewer: user\n\
+                 }\n"
+                .into(),
+            )
+            .await
+            .expect("write_schema");
+        reset_documents(&client).await;
+
+        let rel = |doc: &str, user: &str| Relationship {
+            resource: Some(ObjectReference {
+                object_type: "document".into(),
+                object_id: doc.into(),
+            }),
+            relation: "viewer".into(),
+            subject: Some(SubjectReference {
+                object: Some(ObjectReference {
+                    object_type: "user".into(),
+                    object_id: user.into(),
+                }),
+                optional_relation: String::new(),
+            }),
+            optional_caveat: None,
+            optional_expires_at: None,
+        };
+
+        // 4 relationships: alice→doc1, alice→doc2, bob→doc1, bob→doc3
+        client
+            .write_relationships(WriteRelationshipsRequest {
+                updates: vec![
+                    RelationshipUpdate {
+                        operation: RelOp::Touch as i32,
+                        relationship: Some(rel("doc1", "alice")),
+                    },
+                    RelationshipUpdate {
+                        operation: RelOp::Touch as i32,
+                        relationship: Some(rel("doc2", "alice")),
+                    },
+                    RelationshipUpdate {
+                        operation: RelOp::Touch as i32,
+                        relationship: Some(rel("doc1", "bob")),
+                    },
+                    RelationshipUpdate {
+                        operation: RelOp::Touch as i32,
+                        relationship: Some(rel("doc3", "bob")),
+                    },
+                ],
+                optional_preconditions: Vec::new(),
+                optional_transaction_metadata: None,
+            })
+            .await
+            .expect("write 4 rels");
+
+        // Bulk delete every relationship where subject is alice.
+        let del = client
+            .delete_relationships(DeleteRelationshipsRequest {
+                relationship_filter: Some(RelationshipFilter {
+                    resource_type: "document".into(),
+                    optional_resource_id: String::new(),
+                    optional_relation: String::new(),
+                    optional_resource_id_prefix: String::new(),
+                    optional_subject_filter: Some(SubjectFilter {
+                        subject_type: "user".into(),
+                        optional_subject_id: "alice".into(),
+                        optional_relation: None,
+                    }),
+                }),
+                optional_preconditions: Vec::new(),
+                optional_limit: 0,
+                optional_allow_partial_deletions: false,
+                optional_transaction_metadata: None,
+            })
+            .await
+            .expect("bulk delete");
+        assert_eq!(del.relationships_deleted_count, 2, "expected to delete 2 rows");
+
+        // Survivors: bob's two relationships should remain.
+        let remaining = client
+            .read_relationships(ReadRelationshipsRequest {
+                consistency: Some(Consistency {
+                    requirement: Some(ConsistencyRequirement::FullyConsistent(true)),
+                }),
+                relationship_filter: Some(RelationshipFilter {
+                    resource_type: "document".into(),
+                    optional_resource_id: String::new(),
+                    optional_relation: String::new(),
+                    optional_resource_id_prefix: String::new(),
+                    optional_subject_filter: None,
+                }),
+                optional_limit: 0,
+                optional_cursor: None,
+            })
+            .await
+            .expect("read after");
+        assert_eq!(remaining.len(), 2, "expected 2 surviving rows");
+        for r in &remaining {
+            let subject_id = r
+                .relationship
+                .as_ref()
+                .and_then(|r| r.subject.as_ref())
+                .and_then(|s| s.object.as_ref())
+                .map(|o| o.object_id.clone());
+            assert_eq!(subject_id.as_deref(), Some("bob"));
+        }
     }
 }

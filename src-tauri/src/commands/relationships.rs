@@ -8,9 +8,10 @@
 use super::client_for;
 use crate::error::AppResult;
 use crate::spicedb::proto::{
-    Consistency, ConsistencyRequirement, ObjectReference, ReadRelationshipsRequest,
-    Relationship, RelationshipFilter, RelationshipOperation, RelationshipUpdate,
-    SubjectFilter, SubjectRelationFilter, SubjectReference, WriteRelationshipsRequest,
+    Consistency, ConsistencyRequirement, DeleteRelationshipsRequest, ObjectReference,
+    ReadRelationshipsRequest, Relationship, RelationshipFilter, RelationshipOperation,
+    RelationshipUpdate, SubjectFilter, SubjectRelationFilter, SubjectReference,
+    WriteRelationshipsRequest,
 };
 use crate::AppState;
 use serde::{Deserialize, Serialize};
@@ -135,6 +136,58 @@ pub async fn write_relationship(
             })
             .await?;
         Ok(())
+    }
+    .await)
+}
+
+/// Bulk delete every relationship matching the filter. Optional `limit` caps
+/// the deletion size (without it, SpiceDB rejects calls whose match-set
+/// exceeds the server's `MaxDeleteRelationshipsLimit`, default 1000).
+///
+/// Returns the deletion count. The frontend gets a single number it can
+/// display in a "Deleted N relationships" toast.
+#[derive(Debug, serde::Serialize)]
+pub struct BulkDeleteOutput {
+    pub deleted_count: u64,
+    /// `complete` (all matching rows deleted) or `partial` (limit hit).
+    pub progress: &'static str,
+    pub deleted_at: Option<String>,
+}
+
+#[tauri::command]
+pub async fn bulk_delete_relationships(
+    state: tauri::State<'_, AppState>,
+    connection_id: String,
+    filter: RelationshipFilterInput,
+    limit: Option<u32>,
+) -> AppResult<BulkDeleteOutput> {
+    super::log_err(async {
+        let client = client_for(&state, &connection_id).await?;
+        let limit_value = limit.unwrap_or(0);
+        let resp = client
+            .delete_relationships(DeleteRelationshipsRequest {
+                relationship_filter: Some(build_relationship_filter(&filter)),
+                optional_preconditions: Vec::new(),
+                optional_limit: limit_value,
+                // If the caller specified a limit, allow partial deletion so
+                // the server respects the cap instead of erroring out.
+                optional_allow_partial_deletions: limit_value > 0,
+                optional_transaction_metadata: None,
+            })
+            .await?;
+        use crate::spicedb::proto::authzed::api::v1::delete_relationships_response::DeletionProgress;
+        let progress = match DeletionProgress::try_from(resp.deletion_progress)
+            .unwrap_or(DeletionProgress::Unspecified)
+        {
+            DeletionProgress::Complete => "complete",
+            DeletionProgress::Partial => "partial",
+            DeletionProgress::Unspecified => "unspecified",
+        };
+        Ok(BulkDeleteOutput {
+            deleted_count: resp.relationships_deleted_count,
+            progress,
+            deleted_at: resp.deleted_at.map(|t| t.token),
+        })
     }
     .await)
 }

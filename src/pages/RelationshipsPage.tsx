@@ -2,6 +2,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   api,
+  BulkDeleteOutput,
   ReadRelationshipsOutput,
   RelationshipFilterInput,
   RelationshipInput,
@@ -58,6 +59,37 @@ export function RelationshipsPage() {
       if (readMut.data || readMut.isPending) readMut.mutate();
     },
   });
+
+  const [bulkResult, setBulkResult] = useState<BulkDeleteOutput | null>(null);
+  const bulkDeleteMut = useMutation<BulkDeleteOutput, Error>({
+    mutationFn: () =>
+      api.bulkDeleteRelationships(activeConnectionId!, normalizeFilter(filter)),
+    onMutate: () => {
+      setBannerError(null);
+      setBulkResult(null);
+    },
+    onError: (e) => setBannerError(e.message),
+    onSuccess: (out) => {
+      setBulkResult(out);
+      if (readMut.data || readMut.isPending) readMut.mutate();
+    },
+  });
+
+  const onBulkDelete = () => {
+    if (!filter.resource_type) {
+      setBannerError("Set a resource type before deleting.");
+      return;
+    }
+    const summary = filterSummary(filter);
+    if (
+      !confirm(
+        `Delete every relationship matching:\n\n  ${summary}\n\nThis cannot be undone. Continue?`,
+      )
+    ) {
+      return;
+    }
+    bulkDeleteMut.mutate();
+  };
 
   if (!activeConnectionId) {
     return (
@@ -197,12 +229,37 @@ export function RelationshipsPage() {
             setFilter((p) => ({ ...p, subject_relation: v }))
           }
         />
-        <div className="self-end">
+        <div className="flex flex-col gap-2 self-end">
           <Button type="submit" disabled={readMut.isPending}>
             {readMut.isPending ? "Reading…" : "Read"}
           </Button>
+          <Button
+            type="button"
+            variant="danger"
+            onClick={onBulkDelete}
+            disabled={bulkDeleteMut.isPending}
+            title="Delete every relationship matching the current filter. SpiceDB caps server-side (default 1000)."
+          >
+            {bulkDeleteMut.isPending ? "Deleting…" : "Delete all matching"}
+          </Button>
         </div>
       </form>
+
+      {bulkResult && (
+        <div className="p-3">
+          <Banner tone={bulkResult.progress === "complete" ? "success" : "info"}>
+            Deleted {bulkResult.deleted_count}{" "}
+            {bulkResult.deleted_count === 1 ? "relationship" : "relationships"}
+            {bulkResult.progress === "partial" &&
+              " (server hit limit — re-run to continue)"}
+            {bulkResult.deleted_at && (
+              <span className="ml-2 font-mono text-xs opacity-70">
+                {bulkResult.deleted_at}
+              </span>
+            )}
+          </Banner>
+        </div>
+      )}
 
       {bannerError && (
         <div className="p-3">
@@ -455,4 +512,17 @@ function normalizeRelationship(r: RelationshipInput): RelationshipInput {
 
 function emptyToUndef(s: string | undefined): string | undefined {
   return s && s.length > 0 ? s : undefined;
+}
+
+function filterSummary(f: RelationshipFilterInput): string {
+  const parts: string[] = [`${f.resource_type}:${f.resource_id || "*"}`];
+  if (f.relation) parts.push(`#${f.relation}`);
+  if (f.subject_type) {
+    parts.push(
+      ` @ ${f.subject_type}:${f.subject_id || "*"}${
+        f.subject_relation ? `#${f.subject_relation}` : ""
+      }`,
+    );
+  }
+  return parts.join("");
 }

@@ -120,6 +120,12 @@ export interface ReadRelationshipsOutput {
 
 export type WriteOperation = "create" | "touch" | "delete";
 
+export interface BulkDeleteOutput {
+  deleted_count: number;
+  progress: "complete" | "partial" | "unspecified";
+  deleted_at: string | null;
+}
+
 export type WatchEvent =
   | {
       kind: "update";
@@ -194,6 +200,16 @@ export const api = {
       connectionId,
       operation,
       relationship,
+    }),
+  bulkDeleteRelationships: (
+    connectionId: string,
+    filter: RelationshipFilterInput,
+    limit?: number,
+  ) =>
+    invoke<BulkDeleteOutput>("bulk_delete_relationships", {
+      connectionId,
+      filter,
+      limit,
     }),
 
   // Watch
