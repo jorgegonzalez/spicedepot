@@ -3,6 +3,7 @@ import { AppShell } from "./components/AppShell";
 import { ConnectionsPage } from "./pages/ConnectionsPage";
 import { LookupPage } from "./pages/LookupPage";
 import { PermissionsPage } from "./pages/PermissionsPage";
+import { RelationshipsPage } from "./pages/RelationshipsPage";
 import { SchemaPage } from "./pages/SchemaPage";
 
 export default function App() {
@@ -14,6 +15,7 @@ export default function App() {
         <Route path="/schema" element={<SchemaPage />} />
         <Route path="/permissions" element={<PermissionsPage />} />
         <Route path="/lookup" element={<LookupPage />} />
+        <Route path="/relationships" element={<RelationshipsPage />} />
       </Route>
     </Routes>
   );

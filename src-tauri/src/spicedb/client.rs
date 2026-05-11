@@ -12,8 +12,9 @@ use crate::error::{AppError, AppResult};
 use crate::spicedb::proto::{
     CheckPermissionRequest, CheckPermissionResponse, LookupResourcesRequest,
     LookupResourcesResponse, LookupSubjectsRequest, LookupSubjectsResponse,
-    PermissionsServiceClient, ReadSchemaRequest, ReadSchemaResponse, SchemaServiceClient,
-    WriteSchemaRequest,
+    PermissionsServiceClient, ReadRelationshipsRequest, ReadRelationshipsResponse,
+    ReadSchemaRequest, ReadSchemaResponse, SchemaServiceClient, WriteRelationshipsRequest,
+    WriteRelationshipsResponse, WriteSchemaRequest,
 };
 use http::Uri;
 use tonic::metadata::MetadataValue;
@@ -130,6 +131,32 @@ impl SpiceDbClient {
             out.push(msg);
         }
         Ok(out)
+    }
+
+    /// Server-streaming. Same Vec-drain pattern as the lookups — see their
+    /// doc-comment for the rationale and the swap-to-Channel path.
+    pub async fn read_relationships(
+        &self,
+        req: ReadRelationshipsRequest,
+    ) -> AppResult<Vec<ReadRelationshipsResponse>> {
+        let mut svc = self.permissions();
+        let mut stream = svc.read_relationships(self.auth(req)).await?.into_inner();
+        let mut out = Vec::new();
+        while let Some(msg) = stream.message().await? {
+            out.push(msg);
+        }
+        Ok(out)
+    }
+
+    /// Unary. The frontend currently sends one update at a time; nothing here
+    /// prevents batching when we want it.
+    pub async fn write_relationships(
+        &self,
+        req: WriteRelationshipsRequest,
+    ) -> AppResult<WriteRelationshipsResponse> {
+        let mut svc = self.permissions();
+        let resp = svc.write_relationships(self.auth(req)).await?;
+        Ok(resp.into_inner())
     }
 
     /// Best-effort liveness check. We try `ReadSchema` and treat `NOT_FOUND`
@@ -572,5 +599,197 @@ mod tests {
             vec!["alice".to_string(), "bob".to_string()],
             "doc1 should be viewable by alice and bob"
         );
+    }
+
+    /// End-to-end relationship browser test: write three relationships via
+    /// `write_relationships`, read them back with various filters via
+    /// `read_relationships`, delete one via a TOUCH→DELETE round-trip, then
+    /// verify the read reflects the change.
+    #[tokio::test]
+    #[ignore]
+    async fn relationships_round_trip() {
+        use crate::spicedb::proto::authzed::api::v1::{
+            relationship_update::Operation as RelOp, ObjectReference, Relationship,
+            RelationshipFilter, RelationshipUpdate, SubjectFilter, SubjectReference,
+            WriteRelationshipsRequest,
+        };
+        use crate::spicedb::proto::{
+            Consistency, ConsistencyRequirement, ReadRelationshipsRequest,
+        };
+
+        let endpoint = std::env::var("SPICEDB_TEST_ENDPOINT")
+            .expect("set SPICEDB_TEST_ENDPOINT");
+        let token = std::env::var("SPICEDB_TEST_TOKEN")
+            .expect("set SPICEDB_TEST_TOKEN");
+
+        let client = SpiceDbClient::connect(DialConfig {
+            endpoint,
+            insecure: true,
+            token,
+        })
+        .await
+        .expect("connect");
+
+        client
+            .write_schema(
+                "definition user {}\n\
+                 definition document {\n\
+                     relation viewer: user\n\
+                 }\n"
+                .into(),
+            )
+            .await
+            .expect("write_schema");
+
+        // Helper to build a Relationship value.
+        let rel = |doc: &str, user: &str| Relationship {
+            resource: Some(ObjectReference {
+                object_type: "document".into(),
+                object_id: doc.into(),
+            }),
+            relation: "viewer".into(),
+            subject: Some(SubjectReference {
+                object: Some(ObjectReference {
+                    object_type: "user".into(),
+                    object_id: user.into(),
+                }),
+                optional_relation: String::new(),
+            }),
+            optional_caveat: None,
+            optional_expires_at: None,
+        };
+
+        // Write three relationships in one call.
+        let updates = vec![
+            RelationshipUpdate {
+                operation: RelOp::Touch as i32,
+                relationship: Some(rel("doc1", "alice")),
+            },
+            RelationshipUpdate {
+                operation: RelOp::Touch as i32,
+                relationship: Some(rel("doc2", "alice")),
+            },
+            RelationshipUpdate {
+                operation: RelOp::Touch as i32,
+                relationship: Some(rel("doc1", "bob")),
+            },
+        ];
+        client
+            .write_relationships(WriteRelationshipsRequest {
+                updates,
+                optional_preconditions: Vec::new(),
+                optional_transaction_metadata: None,
+            })
+            .await
+            .expect("write 3 relationships");
+
+        let consistency = || {
+            Some(Consistency {
+                requirement: Some(ConsistencyRequirement::FullyConsistent(true)),
+            })
+        };
+
+        // 1. All document relationships: 3 rows.
+        let all = client
+            .read_relationships(ReadRelationshipsRequest {
+                consistency: consistency(),
+                relationship_filter: Some(RelationshipFilter {
+                    resource_type: "document".into(),
+                    optional_resource_id: String::new(),
+                    optional_relation: String::new(),
+                    optional_resource_id_prefix: String::new(),
+                    optional_subject_filter: None,
+                }),
+                optional_limit: 0,
+                optional_cursor: None,
+            })
+            .await
+            .expect("read all");
+        assert_eq!(all.len(), 3, "expected 3 relationships, got {}", all.len());
+
+        // 2. Filter on resource_id=doc1: 2 rows (alice + bob).
+        let doc1 = client
+            .read_relationships(ReadRelationshipsRequest {
+                consistency: consistency(),
+                relationship_filter: Some(RelationshipFilter {
+                    resource_type: "document".into(),
+                    optional_resource_id: "doc1".into(),
+                    optional_relation: String::new(),
+                    optional_resource_id_prefix: String::new(),
+                    optional_subject_filter: None,
+                }),
+                optional_limit: 0,
+                optional_cursor: None,
+            })
+            .await
+            .expect("read doc1");
+        assert_eq!(doc1.len(), 2, "expected 2 viewers on doc1");
+
+        // 3. Filter on subject alice: 2 rows (doc1, doc2).
+        let alice = client
+            .read_relationships(ReadRelationshipsRequest {
+                consistency: consistency(),
+                relationship_filter: Some(RelationshipFilter {
+                    resource_type: "document".into(),
+                    optional_resource_id: String::new(),
+                    optional_relation: String::new(),
+                    optional_resource_id_prefix: String::new(),
+                    optional_subject_filter: Some(SubjectFilter {
+                        subject_type: "user".into(),
+                        optional_subject_id: "alice".into(),
+                        optional_relation: None,
+                    }),
+                }),
+                optional_limit: 0,
+                optional_cursor: None,
+            })
+            .await
+            .expect("read alice");
+        assert_eq!(alice.len(), 2, "expected alice to view 2 docs");
+
+        // 4. Delete alice's viewer on doc2 via WriteRelationships(DELETE).
+        client
+            .write_relationships(WriteRelationshipsRequest {
+                updates: vec![RelationshipUpdate {
+                    operation: RelOp::Delete as i32,
+                    relationship: Some(rel("doc2", "alice")),
+                }],
+                optional_preconditions: Vec::new(),
+                optional_transaction_metadata: None,
+            })
+            .await
+            .expect("delete alice->doc2");
+
+        // 5. Re-read with subject=alice: now 1 row (doc1 only).
+        let alice_after = client
+            .read_relationships(ReadRelationshipsRequest {
+                consistency: consistency(),
+                relationship_filter: Some(RelationshipFilter {
+                    resource_type: "document".into(),
+                    optional_resource_id: String::new(),
+                    optional_relation: String::new(),
+                    optional_resource_id_prefix: String::new(),
+                    optional_subject_filter: Some(SubjectFilter {
+                        subject_type: "user".into(),
+                        optional_subject_id: "alice".into(),
+                        optional_relation: None,
+                    }),
+                }),
+                optional_limit: 0,
+                optional_cursor: None,
+            })
+            .await
+            .expect("read alice after delete");
+        assert_eq!(
+            alice_after.len(),
+            1,
+            "after deleting alice->doc2, only doc1 should remain"
+        );
+        let surviving = alice_after[0]
+            .relationship
+            .as_ref()
+            .and_then(|r| r.resource.as_ref())
+            .map(|r| r.object_id.clone());
+        assert_eq!(surviving.as_deref(), Some("doc1"));
     }
 }

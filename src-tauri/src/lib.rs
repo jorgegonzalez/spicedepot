@@ -54,6 +54,8 @@ pub fn run() {
             commands::permissions::check_permission,
             commands::lookup::lookup_resources,
             commands::lookup::lookup_subjects,
+            commands::relationships::read_relationships,
+            commands::relationships::write_relationship,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

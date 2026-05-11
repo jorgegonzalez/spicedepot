@@ -170,11 +170,12 @@ The next features (permission checker, relationship browser, lookup) follow the 
 1. ✅ Connection manager
 2. ✅ Schema read/write
 3. ✅ Permission checker (`CheckPermission`)
-4. ☐ Relationship browser (`ReadRelationships` / `WriteRelationships` / `DeleteRelationships`)
+4. ✅ Relationship browser (`ReadRelationships` + single-row `WriteRelationships` create/touch/delete)
 5. ✅ Lookup (`LookupResources`, `LookupSubjects`)
 6. ☐ Watch stream viewer
+7. ☐ Bulk `DeleteRelationships` (delete-by-filter) — scoped out of #4 for v1
 
-Each gets its own page + commands; the gRPC client exposes `permissions()` for everything in the authz family. For the relationship browser, plan on streaming responses — wire a Tokio mpsc channel to a Tauri `Channel<T>` so the UI can render rows incrementally. (The current lookup implementation drains the stream into a Vec inside Rust before returning — fine for the SpiceDB-default 1000-result cap, swap to incremental once we need it.)
+Each gets its own page + commands; the gRPC client exposes `permissions()` for everything in the authz family. The current implementation drains streaming RPCs into a Vec inside Rust before returning — fine for the SpiceDB-default 1000-result cap. When we want incremental rendering or "load more" pagination, swap the Vec for a `tauri::ipc::Channel<T>`.
 
 ## CheckPermission and Lookup: consistency choice
 

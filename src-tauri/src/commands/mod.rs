@@ -1,6 +1,7 @@
 pub mod connections;
 pub mod lookup;
 pub mod permissions;
+pub mod relationships;
 pub mod schema;
 
 use crate::error::AppResult;

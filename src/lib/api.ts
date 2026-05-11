@@ -85,6 +85,41 @@ export interface LookupSubjectsOutput {
   looked_up_at: string | null;
 }
 
+export interface RelationshipFilterInput {
+  resource_type: string;
+  resource_id?: string;
+  relation?: string;
+  subject_type?: string;
+  subject_id?: string;
+  subject_relation?: string;
+}
+
+export interface RelationshipInput {
+  resource_type: string;
+  resource_id: string;
+  relation: string;
+  subject_type: string;
+  subject_id: string;
+  subject_relation?: string;
+}
+
+export interface RelationshipRow {
+  resource_type: string;
+  resource_id: string;
+  relation: string;
+  subject_type: string;
+  subject_id: string;
+  subject_relation: string | null;
+  caveat_name: string | null;
+}
+
+export interface ReadRelationshipsOutput {
+  items: RelationshipRow[];
+  read_at: string | null;
+}
+
+export type WriteOperation = "create" | "touch" | "delete";
+
 export const api = {
   // Connections
   listConnections: () => invoke<Connection[]>("list_connections"),
@@ -122,5 +157,27 @@ export const api = {
     invoke<LookupSubjectsOutput>("lookup_subjects", {
       connectionId,
       input,
+    }),
+
+  // Relationships
+  readRelationships: (
+    connectionId: string,
+    filter: RelationshipFilterInput,
+    limit?: number,
+  ) =>
+    invoke<ReadRelationshipsOutput>("read_relationships", {
+      connectionId,
+      filter,
+      limit,
+    }),
+  writeRelationship: (
+    connectionId: string,
+    operation: WriteOperation,
+    relationship: RelationshipInput,
+  ) =>
+    invoke<void>("write_relationship", {
+      connectionId,
+      operation,
+      relationship,
     }),
 };

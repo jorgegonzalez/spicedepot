@@ -1,0 +1,203 @@
+//! Relationship browser commands: read with optional filter + single-row
+//! create/touch/delete via `WriteRelationships`.
+//!
+//! Bulk delete-by-filter (`PermissionsService.DeleteRelationships`) is out of
+//! scope for v1 — when we add it, route it through a separate command so the
+//! "are you sure?" UX can live on that path alone.
+
+use super::client_for;
+use crate::error::AppResult;
+use crate::spicedb::proto::{
+    Consistency, ConsistencyRequirement, ObjectReference, ReadRelationshipsRequest,
+    Relationship, RelationshipFilter, RelationshipOperation, RelationshipUpdate,
+    SubjectFilter, SubjectRelationFilter, SubjectReference, WriteRelationshipsRequest,
+};
+use crate::AppState;
+use serde::{Deserialize, Serialize};
+use tauri::State;
+
+/// What the UI sends for both filtering reads and identifying a single row to
+/// write or delete. Empty strings → "don't filter on this field".
+#[derive(Debug, Clone, Deserialize)]
+pub struct RelationshipFilterInput {
+    pub resource_type: String,
+    pub resource_id: Option<String>,
+    pub relation: Option<String>,
+    pub subject_type: Option<String>,
+    pub subject_id: Option<String>,
+    pub subject_relation: Option<String>,
+}
+
+/// One concrete relationship — used as the payload for create/touch/delete.
+#[derive(Debug, Clone, Deserialize)]
+pub struct RelationshipInput {
+    pub resource_type: String,
+    pub resource_id: String,
+    pub relation: String,
+    pub subject_type: String,
+    pub subject_id: String,
+    pub subject_relation: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WriteOperation {
+    /// CREATE: errors if the relationship already exists.
+    Create,
+    /// TOUCH: upsert — creates if missing, succeeds silently if it already
+    /// matches. Recommended default for interactive use.
+    Touch,
+    /// DELETE: removes the relationship if present, no-op if missing.
+    Delete,
+}
+
+impl From<WriteOperation> for RelationshipOperation {
+    fn from(op: WriteOperation) -> Self {
+        match op {
+            WriteOperation::Create => RelationshipOperation::Create,
+            WriteOperation::Touch => RelationshipOperation::Touch,
+            WriteOperation::Delete => RelationshipOperation::Delete,
+        }
+    }
+}
+
+/// Flat shape we send to the frontend — easier to render in a table than the
+/// nested proto type.
+#[derive(Debug, Serialize)]
+pub struct RelationshipRow {
+    pub resource_type: String,
+    pub resource_id: String,
+    pub relation: String,
+    pub subject_type: String,
+    pub subject_id: String,
+    pub subject_relation: Option<String>,
+    /// Caveat name if the relationship was written with one. We don't yet
+    /// expose the caveat context shape to the UI.
+    pub caveat_name: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ReadRelationshipsOutput {
+    pub items: Vec<RelationshipRow>,
+    pub read_at: Option<String>,
+}
+
+#[tauri::command]
+pub async fn read_relationships(
+    state: State<'_, AppState>,
+    connection_id: String,
+    filter: RelationshipFilterInput,
+    limit: Option<u32>,
+) -> AppResult<ReadRelationshipsOutput> {
+    super::log_err(async {
+        let client = client_for(&state, &connection_id).await?;
+        let req = ReadRelationshipsRequest {
+            consistency: Some(Consistency {
+                requirement: Some(ConsistencyRequirement::FullyConsistent(true)),
+            }),
+            relationship_filter: Some(build_relationship_filter(&filter)),
+            optional_limit: limit.unwrap_or(0),
+            optional_cursor: None,
+        };
+
+        let responses = client.read_relationships(req).await?;
+        let read_at = responses
+            .first()
+            .and_then(|r| r.read_at.as_ref().map(|t| t.token.clone()));
+        let items = responses
+            .into_iter()
+            .filter_map(|r| r.relationship.map(relationship_to_row))
+            .collect();
+        Ok(ReadRelationshipsOutput { items, read_at })
+    }
+    .await)
+}
+
+#[tauri::command]
+pub async fn write_relationship(
+    state: State<'_, AppState>,
+    connection_id: String,
+    operation: WriteOperation,
+    relationship: RelationshipInput,
+) -> AppResult<()> {
+    super::log_err(async {
+        let client = client_for(&state, &connection_id).await?;
+        let proto_op: RelationshipOperation = operation.into();
+        let update = RelationshipUpdate {
+            operation: proto_op as i32,
+            relationship: Some(input_to_relationship(relationship)),
+        };
+        client
+            .write_relationships(WriteRelationshipsRequest {
+                updates: vec![update],
+                optional_preconditions: Vec::new(),
+                optional_transaction_metadata: None,
+            })
+            .await?;
+        Ok(())
+    }
+    .await)
+}
+
+// ---- conversions ----------------------------------------------------------
+
+fn build_relationship_filter(f: &RelationshipFilterInput) -> RelationshipFilter {
+    let subject_filter = if some_non_empty(&f.subject_type) {
+        Some(SubjectFilter {
+            subject_type: f.subject_type.clone().unwrap_or_default(),
+            optional_subject_id: f.subject_id.clone().unwrap_or_default(),
+            optional_relation: f.subject_relation.as_ref().filter(|s| !s.is_empty()).map(
+                |r| SubjectRelationFilter {
+                    relation: r.clone(),
+                },
+            ),
+        })
+    } else {
+        None
+    };
+    RelationshipFilter {
+        resource_type: f.resource_type.clone(),
+        optional_resource_id: f.resource_id.clone().unwrap_or_default(),
+        optional_relation: f.relation.clone().unwrap_or_default(),
+        optional_resource_id_prefix: String::new(),
+        optional_subject_filter: subject_filter,
+    }
+}
+
+fn input_to_relationship(input: RelationshipInput) -> Relationship {
+    Relationship {
+        resource: Some(ObjectReference {
+            object_type: input.resource_type,
+            object_id: input.resource_id,
+        }),
+        relation: input.relation,
+        subject: Some(SubjectReference {
+            object: Some(ObjectReference {
+                object_type: input.subject_type,
+                object_id: input.subject_id,
+            }),
+            optional_relation: input.subject_relation.unwrap_or_default(),
+        }),
+        optional_caveat: None,
+        optional_expires_at: None,
+    }
+}
+
+fn relationship_to_row(r: Relationship) -> RelationshipRow {
+    let resource = r.resource.unwrap_or_default();
+    let subject = r.subject.unwrap_or_default();
+    let subject_obj = subject.object.unwrap_or_default();
+    RelationshipRow {
+        resource_type: resource.object_type,
+        resource_id: resource.object_id,
+        relation: r.relation,
+        subject_type: subject_obj.object_type,
+        subject_id: subject_obj.object_id,
+        subject_relation: Some(subject.optional_relation).filter(|s| !s.is_empty()),
+        caveat_name: r.optional_caveat.map(|c| c.caveat_name),
+    }
+}
+
+fn some_non_empty(s: &Option<String>) -> bool {
+    s.as_deref().is_some_and(|v| !v.is_empty())
+}
