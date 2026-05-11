@@ -5,7 +5,6 @@
 export const GITHUB_SPONSORS_URL =
   "https://github.com/sponsors/jorgegonzalez";
 
-// TODO: confirm the actual Buy Me a Coffee handle (assumed = github handle).
 export const BUY_ME_A_COFFEE_URL =
   "https://buymeacoffee.com/jorgegonzalez";
 
