@@ -16,23 +16,25 @@ pub async fn read_schema(
     state: State<'_, AppState>,
     connection_id: String,
 ) -> AppResult<SchemaResult> {
-    let client = client_for(&state, &connection_id).await?;
-    match client.read_schema().await {
-        Ok(resp) => Ok(SchemaResult {
-            schema_text: resp.schema_text,
-            read_at: Some(Utc::now().to_rfc3339()),
-        }),
-        Err(crate::error::AppError::Grpc { code, .. })
-            if code == tonic::Code::NotFound =>
-        {
+    super::log_err(async {
+        let client = client_for(&state, &connection_id).await?;
+        match client.read_schema().await {
+            Ok(resp) => Ok(SchemaResult {
+                schema_text: resp.schema_text,
+                read_at: Some(Utc::now().to_rfc3339()),
+            }),
             // No schema written yet — surface as empty string rather than an error.
-            Ok(SchemaResult {
+            Err(crate::error::AppError::Grpc {
+                code: tonic::Code::NotFound,
+                ..
+            }) => Ok(SchemaResult {
                 schema_text: String::new(),
                 read_at: Some(Utc::now().to_rfc3339()),
-            })
+            }),
+            Err(e) => Err(e),
         }
-        Err(e) => Err(e),
     }
+    .await)
 }
 
 #[tauri::command]
@@ -41,6 +43,9 @@ pub async fn write_schema(
     connection_id: String,
     schema: String,
 ) -> AppResult<()> {
-    let client = client_for(&state, &connection_id).await?;
-    client.write_schema(schema).await
+    super::log_err(async {
+        let client = client_for(&state, &connection_id).await?;
+        client.write_schema(schema).await
+    }
+    .await)
 }

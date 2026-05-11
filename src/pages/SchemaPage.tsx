@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EditorState, Compartment } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
@@ -16,8 +16,18 @@ export function SchemaPage() {
   const editorParent = useRef<HTMLDivElement | null>(null);
   const editorView = useRef<EditorView | null>(null);
   const editableComp = useRef(new Compartment());
-  const [draft, setDraft] = useState<string>("");
-  const [dirty, setDirty] = useState(false);
+  // Refs (not state) so the mutation captures the *latest* values without
+  // having to thread them through render → useEffect deps.
+  const draftRef = useRef<string>("");
+  const dirtyRef = useRef<boolean>(false);
+  // Text we last sent to write_schema; used to disambiguate a refetch echoing
+  // our own write from server-side changes the editor should adopt.
+  const lastSubmittedRef = useRef<string | null>(null);
+  const [dirty, _setDirty] = useState(false);
+  const setDirty = useCallback((v: boolean) => {
+    dirtyRef.current = v;
+    _setDirty(v);
+  }, []);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
@@ -28,11 +38,19 @@ export function SchemaPage() {
   });
 
   const writeMut = useMutation({
-    mutationFn: () => api.writeSchema(activeConnectionId!, draft),
+    mutationFn: () => {
+      const text = draftRef.current;
+      lastSubmittedRef.current = text;
+      return api.writeSchema(activeConnectionId!, text);
+    },
     onMutate: () => setSaveError(null),
     onSuccess: () => {
-      setDirty(false);
       setSavedAt(new Date().toISOString());
+      // Don't clear `dirty` blindly — the user may have typed more during the
+      // write. Only clear if no further edits have happened since submit.
+      if (draftRef.current === lastSubmittedRef.current) {
+        setDirty(false);
+      }
       qc.invalidateQueries({ queryKey: ["schema", activeConnectionId] });
     },
     onError: (err: Error) => setSaveError(err.message),
@@ -58,8 +76,7 @@ export function SchemaPage() {
         editableComp.current.of(EditorView.editable.of(true)),
         EditorView.updateListener.of((u) => {
           if (u.docChanged) {
-            const text = u.state.doc.toString();
-            setDraft(text);
+            draftRef.current = u.state.doc.toString();
             setDirty(true);
           }
         }),
@@ -76,21 +93,42 @@ export function SchemaPage() {
   }, []);
 
   // Push remote schema into the editor whenever the query result changes.
+  // Three cases to handle correctly:
+  //   1. First load / connection switch: editor is empty, adopt server text.
+  //   2. Refetch echoing our own write: server returned exactly what we sent
+  //      AND the user hasn't typed since — clear lastSubmittedRef and stop.
+  //   3. Server-side change (or an echo where the user has since typed):
+  //      only adopt if the editor has no unsaved local edits, otherwise
+  //      keep the user's draft and let them resolve manually via Refresh.
   useEffect(() => {
     if (!editorView.current) return;
     const text = schemaQuery.data?.schema_text ?? "";
-    if (text !== draft) {
-      const view = editorView.current;
-      view.dispatch({
-        changes: { from: 0, to: view.state.doc.length, insert: text },
-      });
-      setDraft(text);
+    const view = editorView.current;
+    const current = view.state.doc.toString();
+    if (text === current) {
+      if (lastSubmittedRef.current === text) lastSubmittedRef.current = null;
+      return;
+    }
+    if (lastSubmittedRef.current === text && draftRef.current === text) {
+      // Server confirmed our write and no further edits — sync metadata only.
+      lastSubmittedRef.current = null;
       setDirty(false);
       setSavedAt(schemaQuery.data?.read_at ?? null);
+      return;
     }
-    // We intentionally don't depend on `draft` — only sync when the server doc changes.
+    if (dirtyRef.current) {
+      // Don't clobber unsaved local edits with a server refetch.
+      return;
+    }
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: text },
+    });
+    draftRef.current = text;
+    setDirty(false);
+    setSavedAt(schemaQuery.data?.read_at ?? null);
+    // dirty/draft are read via refs above — no need in deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schemaQuery.data?.schema_text]);
+  }, [schemaQuery.data?.schema_text, schemaQuery.data?.read_at]);
 
   if (!activeConnectionId) {
     return (

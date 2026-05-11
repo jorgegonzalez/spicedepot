@@ -99,7 +99,7 @@ impl ConnectionStore {
             .ok_or_else(|| AppError::NotFound(id.to_string()))
     }
 
-    pub fn create(&self, input: ConnectionInput) -> AppResult<Connection> {
+    pub async fn create(&self, input: ConnectionInput) -> AppResult<Connection> {
         let id = uuid::Uuid::new_v4().to_string();
         let now = Utc::now();
         let conn = Connection {
@@ -115,12 +115,16 @@ impl ConnectionStore {
         self.write_all(&map)?;
         // Token may legitimately be empty (anonymous SpiceDB instances exist).
         if !input.token.is_empty() {
-            keyring::Entry::new(KEYRING_SERVICE, &id)?.set_password(&input.token)?;
+            set_token_blocking(id.clone(), input.token).await?;
         }
         Ok(conn)
     }
 
-    pub fn update(&self, id: &str, input: ConnectionInput) -> AppResult<Connection> {
+    pub async fn update(
+        &self,
+        id: &str,
+        input: ConnectionInput,
+    ) -> AppResult<Connection> {
         let mut map = self.read_all()?;
         let existing = map
             .get_mut(id)
@@ -133,29 +137,52 @@ impl ConnectionStore {
         self.write_all(&map)?;
         // Empty token from the form means "leave unchanged".
         if !input.token.is_empty() {
-            keyring::Entry::new(KEYRING_SERVICE, id)?.set_password(&input.token)?;
+            set_token_blocking(id.to_string(), input.token).await?;
         }
         Ok(updated)
     }
 
-    pub fn delete(&self, id: &str) -> AppResult<()> {
+    pub async fn delete(&self, id: &str) -> AppResult<()> {
         let mut map = self.read_all()?;
         if map.remove(id).is_none() {
             return Err(AppError::NotFound(id.to_string()));
         }
         self.write_all(&map)?;
-        // Best-effort token removal — ignore "no entry" type errors.
-        if let Ok(entry) = keyring::Entry::new(KEYRING_SERVICE, id) {
-            let _ = entry.delete_credential();
-        }
+        // Best-effort token removal — log but don't fail the delete.
+        let id_owned = id.to_string();
+        let _ = tokio::task::spawn_blocking(move || {
+            if let Ok(entry) = keyring::Entry::new(KEYRING_SERVICE, &id_owned) {
+                let _ = entry.delete_credential();
+            }
+        })
+        .await;
         Ok(())
     }
 
-    pub fn token(&self, id: &str) -> AppResult<String> {
-        match keyring::Entry::new(KEYRING_SERVICE, id)?.get_password() {
+    pub async fn token(&self, id: &str) -> AppResult<String> {
+        let id_owned = id.to_string();
+        let res = tokio::task::spawn_blocking(move || {
+            keyring::Entry::new(KEYRING_SERVICE, &id_owned)?.get_password()
+        })
+        .await
+        .map_err(|e| AppError::Other(format!("keychain task: {e}")))?;
+        match res {
             Ok(t) => Ok(t),
             Err(keyring::Error::NoEntry) => Ok(String::new()),
             Err(e) => Err(AppError::from(e)),
         }
     }
+}
+
+/// Sync keyring write off the Tokio runtime. Keychain APIs (especially
+/// macOS's) can block waiting for user authorization dialogs; doing that on a
+/// runtime worker thread starves other commands. Spawn-blocking dispatches it
+/// to Tokio's blocking pool instead.
+async fn set_token_blocking(id: String, token: String) -> AppResult<()> {
+    tokio::task::spawn_blocking(move || {
+        keyring::Entry::new(KEYRING_SERVICE, &id)?.set_password(&token)
+    })
+    .await
+    .map_err(|e| AppError::Other(format!("keychain task: {e}")))??;
+    Ok(())
 }

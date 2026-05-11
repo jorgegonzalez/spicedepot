@@ -4,7 +4,9 @@ use serde::{Serialize, Serializer};
 ///
 /// Tauri serializes the `Err` variant of a command's `Result` by calling
 /// `Serialize`. We collapse to a string so the frontend gets a clean
-/// message; full source chain is logged via `tracing` at the boundary.
+/// message; the full `Display` (which includes `#[from]` source chains
+/// like `tonic::transport::Error`) is recorded server-side by
+/// `commands::log_err`, which every command wraps its result in.
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
     #[error("connection not found: {0}")]

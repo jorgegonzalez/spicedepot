@@ -86,9 +86,10 @@ The frontend never speaks gRPC. Every backend operation is a Tauri command. The 
 ### Adding a new Tauri command
 
 1. Add the function in `src-tauri/src/commands/<area>.rs` with `#[tauri::command]` and `AppResult<T>` return.
-2. Register it in `src-tauri/src/lib.rs` inside `tauri::generate_handler![...]`.
-3. Add a typed wrapper in `src/lib/api.ts`.
-4. Use it from React via `useQuery` / `useMutation` against `api.foo`.
+2. Wrap the body's result in `super::log_err(...)` so failures land in the Rust logs (the frontend only sees the error string).
+3. Register it in `src-tauri/src/lib.rs` inside `tauri::generate_handler![...]`.
+4. Add a typed wrapper in `src/lib/api.ts`.
+5. Use it from React via `useQuery` / `useMutation` against `api.foo`.
 
 ### Argument naming convention
 
@@ -114,6 +115,16 @@ Two stores, one logical record:
 - **OS keychain via `keyring`** (service `dev.spicelens.app`, user = connection UUID): the bearer token. Never written to disk by us.
 
 `ConnectionInput.token == ""` on update means "leave token unchanged" — important UX detail.
+
+### Keychain calls must use `spawn_blocking`
+
+The `keyring` crate is **synchronous** — it blocks the calling thread for the duration of the keychain operation, and on macOS those operations can stall waiting for the user to dismiss an authorization prompt. Calling it directly from a `#[tauri::command] async fn` would block a Tokio worker thread (and on macOS, potentially deadlock the runtime).
+
+Every keychain call in `connections.rs` is wrapped in `tokio::task::spawn_blocking`. The helper `set_token_blocking` shows the pattern; reuse it (or model new keychain code on it) — never call `keyring::Entry::*` directly from an async context.
+
+### Linux: requires Secret Service for token persistence
+
+We use the `linux-native-sync-persistent` keyring feature, which layers the kernel keyutils session keyring (fast, in-process) over Secret Service (persistent, D-Bus). On a typical Linux desktop (GNOME/KDE/Cinnamon/etc.) tokens persist across reboots; on a headless Linux box without a running `secret-service` provider, tokens behave like `linux-native` alone — they survive within a session but vanish on reboot. Document this in the connection-creation flow once we expose it to the user.
 
 ## Proto code generation
 

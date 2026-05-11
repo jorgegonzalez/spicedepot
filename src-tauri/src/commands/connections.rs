@@ -6,7 +6,7 @@ use tauri::State;
 
 #[tauri::command]
 pub async fn list_connections(state: State<'_, AppState>) -> AppResult<Vec<Connection>> {
-    state.connections.lock().await.list()
+    super::log_err(state.connections.lock().await.list())
 }
 
 #[tauri::command]
@@ -14,7 +14,7 @@ pub async fn get_connection(
     state: State<'_, AppState>,
     id: String,
 ) -> AppResult<Connection> {
-    state.connections.lock().await.get(&id)
+    super::log_err(state.connections.lock().await.get(&id))
 }
 
 #[tauri::command]
@@ -22,7 +22,8 @@ pub async fn create_connection(
     state: State<'_, AppState>,
     input: ConnectionInput,
 ) -> AppResult<Connection> {
-    state.connections.lock().await.create(input)
+    let store = state.connections.lock().await;
+    super::log_err(store.create(input).await)
 }
 
 #[tauri::command]
@@ -31,7 +32,8 @@ pub async fn update_connection(
     id: String,
     input: ConnectionInput,
 ) -> AppResult<Connection> {
-    state.connections.lock().await.update(&id, input)
+    let store = state.connections.lock().await;
+    super::log_err(store.update(&id, input).await)
 }
 
 #[tauri::command]
@@ -39,7 +41,8 @@ pub async fn delete_connection(
     state: State<'_, AppState>,
     id: String,
 ) -> AppResult<()> {
-    state.connections.lock().await.delete(&id)
+    let store = state.connections.lock().await;
+    super::log_err(store.delete(&id).await)
 }
 
 /// Dial the connection and return a friendly status string.
@@ -49,6 +52,9 @@ pub async fn test_connection(
     state: State<'_, AppState>,
     id: String,
 ) -> AppResult<String> {
-    let client = client_for(&state, &id).await?;
-    client.ping().await
+    super::log_err(async {
+        let client = client_for(&state, &id).await?;
+        client.ping().await
+    }
+    .await)
 }
