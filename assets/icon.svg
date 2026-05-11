@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Background: dark slate rounded square, same palette as the app chrome -->
+  <rect width="1024" height="1024" rx="220" fill="#0f172a"/>
+  <!-- Lens: orange ring -->
+  <circle cx="512" cy="512" r="300" fill="none" stroke="#f97316" stroke-width="72"/>
+  <!-- Spice / aperture dot -->
+  <circle cx="512" cy="512" r="120" fill="#f97316"/>
+</svg>
