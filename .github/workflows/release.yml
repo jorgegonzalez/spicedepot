@@ -92,6 +92,9 @@ jobs:
               - Windows (x64): `*.msi` / `*-setup.exe`
 
             See the release notes below for changes in this version.
-          releaseDraft: true
+          # Auto-publish so the update-tap workflow can listen for the
+          # `release: published` event. Flip this back to true if you want
+          # a manual review gate before each release goes live.
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

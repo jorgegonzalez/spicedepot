@@ -6,9 +6,28 @@ A cross-platform desktop GUI for [SpiceDB](https://github.com/authzed/spicedb), 
 
 ## Install
 
-Pre-built binaries land on the [Releases page](https://github.com/your-org/spicelens/releases) (macOS universal `.dmg`, Linux `.AppImage` / `.deb`, Windows `.msi`). Each release is built from the tagged commit by [`.github/workflows/release.yml`](.github/workflows/release.yml).
+### macOS — Homebrew (easiest)
 
-To build from source, see "Build from source" below.
+```bash
+brew tap jorgegonzalez/tap
+brew install --cask spicelens
+```
+
+Auto-updates via `brew upgrade --cask spicelens`.
+
+### Pre-built binaries
+
+Every release on the [Releases page](https://github.com/jorgegonzalez/spicelens/releases) ships:
+
+- macOS universal `.dmg` (Apple Silicon + Intel)
+- Linux `.AppImage` + `.deb` (x64)
+- Windows `.msi` + `setup.exe` (x64)
+
+The binaries aren't notarized yet, so macOS may show a Gatekeeper warning on first launch (`right-click → Open → Open` to bypass). Notarization is on the roadmap.
+
+### From source
+
+See "Build from source" below.
 
 ## Features
 

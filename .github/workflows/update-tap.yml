@@ -1,0 +1,128 @@
+name: Update Homebrew tap
+
+# Fires when a release is published on this repo (either by the release.yml
+# workflow auto-publishing or by you manually flipping a draft to published
+# in the Releases UI). Downloads the universal-macOS DMG, computes its
+# SHA256, rewrites the spicelens cask in jorgegonzalez/homebrew-tap, and
+# pushes the change.
+#
+# Required secret on this repo:
+#   HOMEBREW_TAP_TOKEN — a fine-grained PAT with Contents: read & write
+#     permission on jorgegonzalez/homebrew-tap. Generate at:
+#     https://github.com/settings/personal-access-tokens/new
+#     Resource owner: jorgegonzalez
+#     Repository access: Only select repositories → homebrew-tap
+#     Permissions → Repository permissions → Contents: Read and write
+#     Expiration: 1 year or your preference; renew before it expires.
+#
+# Sanity-test this manually after wiring the secret: bump the workflow's
+# `workflow_dispatch` input below to a known release tag and run it from
+# the Actions tab.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to sync (e.g. v0.1.0)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve release tag + version
+        id: rel
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${{ github.event.release.tag_name }}"
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG"         >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved tag=$TAG version=$VERSION"
+
+      - name: Download universal macOS DMG + compute SHA256
+        id: dmg
+        run: |
+          TAG="${{ steps.rel.outputs.tag }}"
+          VERSION="${{ steps.rel.outputs.version }}"
+          # Tauri's universal-apple-darwin bundle filename:
+          #   <productName>_<version>_universal.dmg
+          # productName is "SpiceLens" (from tauri.conf.json).
+          FILENAME="SpiceLens_${VERSION}_universal.dmg"
+          URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${FILENAME}"
+          echo "URL: $URL"
+          curl -sSfL -o spicelens.dmg "$URL"
+          SHA=$(sha256sum spicelens.dmg | awk '{print $1}')
+          SIZE=$(stat -c %s spicelens.dmg)
+          echo "SHA256=$SHA · size=$SIZE bytes"
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout homebrew-tap with write token
+        uses: actions/checkout@v4
+        with:
+          repository: jorgegonzalez/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Rewrite Casks/spicelens.rb
+        run: |
+          VERSION="${{ steps.rel.outputs.version }}"
+          SHA256="${{ steps.dmg.outputs.sha256 }}"
+          cat > tap/Casks/spicelens.rb <<EOF
+          cask "spicelens" do
+            # Managed by the update-tap workflow in jorgegonzalez/spicelens.
+            # Manual edits get overwritten on the next release.
+            version "${VERSION}"
+            sha256 "${SHA256}"
+
+            url "https://github.com/jorgegonzalez/spicelens/releases/download/v#{version}/SpiceLens_#{version}_universal.dmg",
+                verified: "github.com/jorgegonzalez/spicelens/"
+            name "SpiceLens"
+            desc "Native desktop GUI for SpiceDB"
+            homepage "https://github.com/jorgegonzalez/spicelens"
+
+            livecheck do
+              url :url
+              strategy :github_latest
+            end
+
+            auto_updates true
+
+            app "SpiceLens.app"
+
+            zap trash: [
+              "~/Library/Application Support/dev.spicelens.app",
+              "~/Library/Caches/dev.spicelens.app",
+              "~/Library/Preferences/dev.spicelens.app.plist",
+              "~/Library/Saved Application State/dev.spicelens.app.savedState",
+              "~/Library/WebKit/dev.spicelens.app",
+            ]
+          end
+          EOF
+          echo "---"
+          cat tap/Casks/spicelens.rb
+
+      - name: Commit + push tap update
+        working-directory: tap
+        run: |
+          git config user.name  "Jorge Gonzalez"
+          git config user.email "jorgegonzalez@users.noreply.github.com"
+          if git diff --quiet Casks/spicelens.rb; then
+            echo "No changes — tap already at this version."
+            exit 0
+          fi
+          git add Casks/spicelens.rb
+          git commit -m "spicelens ${{ steps.rel.outputs.version }}
+
+          Auto-updated by jorgegonzalez/spicelens release workflow.
+
+          Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+          git push
