@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SpiceLens — Native desktop GUI for SpiceDB</title>
+    <meta
+      name="description"
+      content="Open-source desktop client for SpiceDB. Manage schemas, browse relationships, check permissions, and watch live changes — across macOS, Windows, and Linux. Built with Rust and Tauri 2."
+    />
+    <link rel="icon" type="image/png" href="./icon.png" />
+
+    <!-- Open Graph / social -->
+    <meta property="og:title" content="SpiceLens — Native desktop GUI for SpiceDB" />
+    <meta
+      property="og:description"
+      content="Open-source desktop client for SpiceDB. Native, fast, MIT-licensed."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://spicelens.app" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Inter for body, slightly tighter than system fonts -->
+    <link rel="preconnect" href="https://rsms.me/" />
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+
+    <script type="module" src="/src/main.js"></script>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body class="font-sans antialiased">
+    <!-- ───────────────────────────── NAV ───────────────────────────── -->
+    <header class="sticky top-0 z-30 border-b border-slate-900/80 bg-[#050911]/80 backdrop-blur">
+      <nav class="container-narrow flex h-14 items-center justify-between">
+        <a href="#top" class="flex items-center gap-2">
+          <span
+            class="inline-flex h-6 w-6 items-center justify-center rounded border border-orange-500/40 bg-slate-900"
+          >
+            <span class="h-2 w-2 rounded-full bg-orange-500"></span>
+          </span>
+          <span class="font-semibold tracking-tight">SpiceLens</span>
+        </a>
+        <div class="hidden items-center gap-6 text-sm text-slate-300 md:flex">
+          <a href="#features" class="hover:text-white">Features</a>
+          <a href="#why" class="hover:text-white">Why SpiceLens</a>
+          <a href="#faq" class="hover:text-white">FAQ</a>
+          <a
+            href="https://github.com/jorgegonzalez/spicelens"
+            class="hover:text-white"
+            >GitHub</a
+          >
+        </div>
+        <a
+          href="#download"
+          class="inline-flex items-center rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-orange-400"
+          >Download</a
+        >
+      </nav>
+    </header>
+
+    <!-- ───────────────────────────── HERO ───────────────────────────── -->
+    <section id="top" class="relative overflow-hidden">
+      <div class="absolute inset-x-0 top-0 h-[680px] dot-grid fade-bottom"></div>
+      <div
+        class="absolute left-1/2 top-0 -z-10 h-[640px] w-[1200px] -translate-x-1/2 opacity-60 blur-3xl"
+        style="
+          background: radial-gradient(
+            closest-side,
+            rgba(249, 115, 22, 0.25),
+            transparent
+          );
+        "
+      ></div>
+
+      <div class="container-narrow relative pt-16 pb-24 md:pt-24 md:pb-32">
+        <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/60 px-3 py-1 text-xs text-slate-300">
+          <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+          v0.1 — open beta, MIT licensed
+        </div>
+        <h1
+          class="max-w-4xl text-5xl font-semibold leading-[1.05] tracking-tight md:text-7xl"
+        >
+          A native desktop GUI for
+          <span class="gradient-text">SpiceDB</span>.
+        </h1>
+        <p class="mt-6 max-w-2xl text-lg text-slate-300 md:text-xl">
+          Manage schemas, browse relationships, check permissions, and watch
+          live changes — all in one fast, MIT-licensed app. Built with Rust
+          and Tauri 2. No Electron, no telemetry, no account required.
+        </p>
+
+        <div class="mt-10 flex flex-wrap items-center gap-3">
+          <a
+            id="download"
+            href="https://github.com/jorgegonzalez/spicelens/releases"
+            class="glow-orange inline-flex items-center gap-2 rounded-lg bg-orange-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-400"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download for macOS
+          </a>
+          <a
+            href="https://github.com/jorgegonzalez/spicelens/releases"
+            class="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/60 px-5 py-3 text-sm font-medium text-slate-200 transition hover:bg-slate-800"
+            >Linux · Windows builds</a
+          >
+          <a
+            href="https://github.com/jorgegonzalez/spicelens"
+            class="inline-flex items-center gap-2 rounded-lg px-3 py-3 text-sm font-medium text-slate-300 transition hover:text-white"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.6.5.5 5.6.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.4-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2.9-.3 2-.4 3-.4s2.1.1 3 .4c2.3-1.6 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.9 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.6 18.4.5 12 .5z"/></svg>
+            View source
+          </a>
+        </div>
+
+        <p class="mt-6 text-sm text-slate-500">
+          Free · MIT licensed · Works with self-hosted SpiceDB and Authzed Cloud
+        </p>
+
+        <!-- Mock screenshot — built in HTML/CSS so it scales cleanly at any size -->
+        <div class="relative mt-16 md:mt-20">
+          <div
+            class="absolute inset-x-8 -top-4 h-12 rounded-t-xl bg-orange-500/10 blur-2xl"
+          ></div>
+          <div
+            class="surface relative overflow-hidden shadow-2xl shadow-black/40"
+          >
+            <!-- title bar -->
+            <div class="flex items-center gap-2 border-b border-slate-800/80 px-4 py-2">
+              <span class="h-2.5 w-2.5 rounded-full bg-red-500/60"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-amber-400/60"></span>
+              <span class="h-2.5 w-2.5 rounded-full bg-emerald-500/60"></span>
+              <div class="ml-4 flex items-center gap-1.5 text-xs text-slate-400">
+                <span class="h-2 w-2 rounded-full bg-orange-500"></span>
+                SpiceLens
+              </div>
+              <div class="ml-4 hidden gap-1 text-xs md:flex">
+                <span class="rounded px-2 py-0.5 text-slate-500">Connections</span>
+                <span class="rounded px-2 py-0.5 text-slate-500">Schema</span>
+                <span class="rounded px-2 py-0.5 text-slate-500">Relationships</span>
+                <span class="rounded bg-slate-800 px-2 py-0.5 text-slate-100">Check</span>
+                <span class="rounded px-2 py-0.5 text-slate-500">Lookup</span>
+                <span class="rounded px-2 py-0.5 text-slate-500">Watch</span>
+              </div>
+              <div class="ml-auto flex items-center gap-2 text-xs text-slate-500">
+                <span>Active:</span>
+                <span class="rounded border border-slate-700 bg-slate-900 px-2 py-0.5">prod · grpc.authzed.com:443</span>
+              </div>
+            </div>
+            <!-- body: form left, result right -->
+            <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr]">
+              <div class="space-y-4 border-b border-slate-800/80 p-6 md:border-b-0 md:border-r">
+                <div>
+                  <div class="text-[10px] uppercase tracking-wide text-slate-500">Resource</div>
+                  <div class="mt-1 grid grid-cols-2 gap-2 font-mono text-sm">
+                    <div class="rounded border border-slate-800 bg-slate-950 px-2 py-1.5 text-slate-200">document</div>
+                    <div class="rounded border border-slate-800 bg-slate-950 px-2 py-1.5 text-slate-200">readme</div>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-wide text-slate-500">Permission</div>
+                  <div class="mt-1 rounded border border-slate-800 bg-slate-950 px-2 py-1.5 font-mono text-sm text-slate-200">view</div>
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-wide text-slate-500">Subject</div>
+                  <div class="mt-1 grid grid-cols-2 gap-2 font-mono text-sm">
+                    <div class="rounded border border-slate-800 bg-slate-950 px-2 py-1.5 text-slate-200">user</div>
+                    <div class="rounded border border-slate-800 bg-slate-950 px-2 py-1.5 text-slate-200">alice</div>
+                  </div>
+                </div>
+                <button
+                  class="inline-flex w-full items-center justify-center rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white"
+                >
+                  Check
+                </button>
+              </div>
+              <div class="space-y-4 p-6">
+                <div
+                  class="rounded-lg border border-emerald-700 bg-emerald-950/60 p-4"
+                >
+                  <div class="text-xl font-semibold text-emerald-200">
+                    ✓ Allowed
+                  </div>
+                  <div class="mt-1 font-mono text-xs text-slate-400">
+                    document:readme#view @ user:alice
+                  </div>
+                </div>
+                <div class="font-mono text-xs text-slate-500">
+                  <div class="mb-1 text-[10px] uppercase tracking-wide text-slate-600">checked_at</div>
+                  <div class="break-all">GhUKEzE3MTc2NzU1OTcyNDk2MTAwMA==</div>
+                </div>
+                <div class="rounded border border-slate-800 bg-slate-950/60 p-3 text-xs">
+                  <div class="mb-1 text-[10px] uppercase tracking-wide text-slate-500">Consistency</div>
+                  <div class="font-mono text-slate-300">fully_consistent</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────────────────────── FEATURE GRID ───────────────────────────── -->
+    <section id="features" class="border-t border-slate-900/80 py-24">
+      <div class="container-narrow">
+        <div class="mx-auto max-w-2xl text-center">
+          <div class="text-xs uppercase tracking-widest text-orange-400">
+            Built for it
+          </div>
+          <h2 class="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">
+            Every SpiceDB API, in one window.
+          </h2>
+          <p class="mt-4 text-slate-400">
+            Six pages cover the six things you actually do with SpiceDB.
+            Forms, tables, and a live stream — no YAML to write, no zed CLI
+            invocations to remember.
+          </p>
+        </div>
+
+        <div class="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <!-- 1 Schema -->
+          <article class="surface p-6">
+            <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500/10 text-orange-400">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            </div>
+            <h3 class="text-lg font-semibold">Schema editor</h3>
+            <p class="mt-2 text-sm text-slate-400">
+              CodeMirror 6 with SpiceDB syntax highlighting. Read and write
+              the live schema. Round-trips through the official
+              <code class="font-mono text-slate-300">SchemaService</code> gRPC.
+            </p>
+          </article>
+
+          <!-- 2 Permission Check -->
+          <article class="surface p-6">
+            <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <h3 class="text-lg font-semibold">Permission check</h3>
+            <p class="mt-2 text-sm text-slate-400">
+              CheckPermission with fully-consistent reads. A relationship you
+              wrote a second ago shows up in the next check — no stale
+              snapshots, no surprise denials.
+            </p>
+          </article>
+
+          <!-- 3 Lookup -->
+          <article class="surface p-6">
+            <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-sky-500/10 text-sky-400">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <h3 class="text-lg font-semibold">Lookup</h3>
+            <p class="mt-2 text-sm text-slate-400">
+              "Which docs can alice view?" and "Who can view doc1?" via
+              <code class="font-mono text-slate-300">LookupResources</code> and
+              <code class="font-mono text-slate-300">LookupSubjects</code>.
+              Results render as a sortable table.
+            </p>
+          </article>
+
+          <!-- 4 Relationships -->
+          <article class="surface p-6">
+            <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-violet-500/10 text-violet-400">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </div>
+            <h3 class="text-lg font-semibold">Relationship browser</h3>
+            <p class="mt-2 text-sm text-slate-400">
+              Filter, read, and write the relationship store. Add or delete
+              single rows inline. Bulk-delete every row matching a filter,
+              with confirmation.
+            </p>
+          </article>
+
+          <!-- 5 Watch -->
+          <article class="surface p-6">
+            <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-rose-500/10 text-rose-400">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            </div>
+            <h3 class="text-lg font-semibold">Live watch stream</h3>
+            <p class="mt-2 text-sm text-slate-400">
+              Subscribe to the WatchService and see relationship changes the
+              instant they hit the server. Filter by object type. Useful for
+              debugging webhook integrations and bulk imports.
+            </p>
+          </article>
+
+          <!-- 6 Connections -->
+          <article class="surface p-6">
+            <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+            </div>
+            <h3 class="text-lg font-semibold">Multiple connections</h3>
+            <p class="mt-2 text-sm text-slate-400">
+              Save endpoints for dev / staging / prod. Bearer tokens go
+              straight to the OS keychain — Keychain on macOS, Credential
+              Manager on Windows, Secret Service on Linux. Never written to
+              disk.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────────────────────── WHY ───────────────────────────── -->
+    <section id="why" class="border-t border-slate-900/80 py-24">
+      <div class="container-narrow">
+        <div class="grid items-start gap-12 md:grid-cols-2">
+          <div>
+            <div class="text-xs uppercase tracking-widest text-orange-400">
+              Why SpiceLens
+            </div>
+            <h2 class="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">
+              Built like a tool, not a portal.
+            </h2>
+            <p class="mt-5 text-slate-400">
+              SpiceLens is a native binary. It talks gRPC directly — the same
+              wire format as the <code class="font-mono text-slate-300">zed</code> CLI — so what you see
+              in the GUI is exactly what your code sees in production.
+            </p>
+            <p class="mt-4 text-slate-400">
+              No browser tab. No account. No telemetry. Insecure plaintext
+              gRPC works out of the box for local dev. TLS uses rustls with
+              native root certs.
+            </p>
+          </div>
+
+          <ul class="space-y-4">
+            <li class="surface flex items-start gap-4 p-5">
+              <span class="mt-1 inline-flex h-8 w-8 flex-none items-center justify-center rounded-md bg-orange-500/10 text-orange-400 font-mono text-sm">Rs</span>
+              <div>
+                <div class="font-medium">Rust + Tauri 2</div>
+                <div class="text-sm text-slate-400">
+                  ~10 MB installer, instant cold start. The Rust side owns
+                  every gRPC call; the React webview never touches the wire.
+                </div>
+              </div>
+            </li>
+            <li class="surface flex items-start gap-4 p-5">
+              <span class="mt-1 inline-flex h-8 w-8 flex-none items-center justify-center rounded-md bg-emerald-500/10 text-emerald-400 font-mono text-sm">MIT</span>
+              <div>
+                <div class="font-medium">Open source, forkable</div>
+                <div class="text-sm text-slate-400">
+                  MIT licensed. Read the code, file issues, send PRs. No paid
+                  tier hiding the good features.
+                </div>
+              </div>
+            </li>
+            <li class="surface flex items-start gap-4 p-5">
+              <span class="mt-1 inline-flex h-8 w-8 flex-none items-center justify-center rounded-md bg-sky-500/10 text-sky-400 font-mono text-sm">∅</span>
+              <div>
+                <div class="font-medium">Zero telemetry</div>
+                <div class="text-sm text-slate-400">
+                  Nothing leaves your machine except the gRPC calls you
+                  explicitly make to SpiceDB. No analytics, no error reporting
+                  service, no "phone home" pings.
+                </div>
+              </div>
+            </li>
+            <li class="surface flex items-start gap-4 p-5">
+              <span class="mt-1 inline-flex h-8 w-8 flex-none items-center justify-center rounded-md bg-violet-500/10 text-violet-400 font-mono text-sm">×3</span>
+              <div>
+                <div class="font-medium">Three platforms, one codebase</div>
+                <div class="text-sm text-slate-400">
+                  macOS universal (Apple Silicon + Intel), Linux x64,
+                  Windows x64. Same UI, same features, native everywhere.
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────────────────────── STATS ───────────────────────────── -->
+    <section class="border-t border-slate-900/80 py-16">
+      <div class="container-narrow">
+        <dl class="grid grid-cols-2 gap-y-10 text-center md:grid-cols-4">
+          <div>
+            <dt class="text-sm uppercase tracking-widest text-slate-500">SpiceDB APIs</dt>
+            <dd class="mt-2 text-4xl font-semibold text-white">6 / 6</dd>
+            <dd class="mt-1 text-sm text-slate-400">Schema, Permissions, Watch, full coverage</dd>
+          </div>
+          <div>
+            <dt class="text-sm uppercase tracking-widest text-slate-500">Platforms</dt>
+            <dd class="mt-2 text-4xl font-semibold text-white">3</dd>
+            <dd class="mt-1 text-sm text-slate-400">macOS · Linux · Windows</dd>
+          </div>
+          <div>
+            <dt class="text-sm uppercase tracking-widest text-slate-500">License</dt>
+            <dd class="mt-2 text-4xl font-semibold text-white">MIT</dd>
+            <dd class="mt-1 text-sm text-slate-400">Source-available, forkable</dd>
+          </div>
+          <div>
+            <dt class="text-sm uppercase tracking-widest text-slate-500">Price</dt>
+            <dd class="mt-2 text-4xl font-semibold text-white">$0</dd>
+            <dd class="mt-1 text-sm text-slate-400">Free forever, no account</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ───────────────────────────── FAQ ───────────────────────────── -->
+    <section id="faq" class="border-t border-slate-900/80 py-24">
+      <div class="container-narrow">
+        <div class="mx-auto max-w-2xl text-center">
+          <div class="text-xs uppercase tracking-widest text-orange-400">
+            FAQ
+          </div>
+          <h2 class="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">
+            Questions, answered.
+          </h2>
+        </div>
+
+        <div class="mx-auto mt-14 max-w-3xl divide-y divide-slate-900">
+          <details class="group py-5">
+            <summary class="flex cursor-pointer items-center justify-between text-lg font-medium">
+              Is SpiceLens really free?
+              <span class="text-slate-500 group-open:rotate-180 transition">▾</span>
+            </summary>
+            <p class="mt-3 text-slate-400">
+              Yes — MIT licensed, no paid tier, no account, no ads. If it
+              saves you time, you can chip in via
+              <a href="https://github.com/sponsors/jorgegonzalez" class="text-orange-400 hover:underline">GitHub Sponsors</a>
+              or
+              <a href="https://buymeacoffee.com/jorgegonzalez" class="text-orange-400 hover:underline">Buy Me a Coffee</a>,
+              but it's never required.
+            </p>
+          </details>
+
+          <details class="group py-5">
+            <summary class="flex cursor-pointer items-center justify-between text-lg font-medium">
+              What platforms does it support?
+              <span class="text-slate-500 group-open:rotate-180 transition">▾</span>
+            </summary>
+            <p class="mt-3 text-slate-400">
+              macOS universal (works on Apple Silicon and Intel), Linux x64
+              (AppImage + .deb), and Windows x64 (.msi + setup .exe). The
+              same Rust codebase compiles to all three.
+            </p>
+          </details>
+
+          <details class="group py-5">
+            <summary class="flex cursor-pointer items-center justify-between text-lg font-medium">
+              Does it work with Authzed Cloud?
+              <span class="text-slate-500 group-open:rotate-180 transition">▾</span>
+            </summary>
+            <p class="mt-3 text-slate-400">
+              Yes. Add a connection with endpoint <code class="font-mono text-slate-300">grpc.authzed.com:443</code>,
+              your permission system's API token, and leave the "Insecure"
+              checkbox unchecked (TLS via rustls). Everything else works
+              identically to a self-hosted SpiceDB.
+            </p>
+          </details>
+
+          <details class="group py-5">
+            <summary class="flex cursor-pointer items-center justify-between text-lg font-medium">
+              Is my data secure?
+              <span class="text-slate-500 group-open:rotate-180 transition">▾</span>
+            </summary>
+            <p class="mt-3 text-slate-400">
+              Bearer tokens are written to your OS keychain — Apple Keychain
+              on macOS, Credential Manager on Windows, Secret Service on
+              Linux — never to a plain file. Schemas and relationships never
+              leave your machine except through the gRPC calls you make.
+              There is no telemetry of any kind.
+            </p>
+          </details>
+
+          <details class="group py-5">
+            <summary class="flex cursor-pointer items-center justify-between text-lg font-medium">
+              Can I import or export relationships?
+              <span class="text-slate-500 group-open:rotate-180 transition">▾</span>
+            </summary>
+            <p class="mt-3 text-slate-400">
+              Single-row create / touch / delete works today through the
+              relationship browser, plus bulk delete by filter. Bulk CSV
+              import / export is on the roadmap — file an issue if you'd
+              like it prioritized.
+            </p>
+          </details>
+
+          <details class="group py-5">
+            <summary class="flex cursor-pointer items-center justify-between text-lg font-medium">
+              Do you offer paid support?
+              <span class="text-slate-500 group-open:rotate-180 transition">▾</span>
+            </summary>
+            <p class="mt-3 text-slate-400">
+              Community support lives on
+              <a href="https://github.com/jorgegonzalez/spicelens/issues" class="text-orange-400 hover:underline">GitHub Issues</a>.
+              For paid commercial support, priority bug fixes, and custom
+              features, see
+              <a href="https://probe.example.com/spicelens" class="text-orange-400 hover:underline">Probe</a>.
+            </p>
+          </details>
+
+          <details class="group py-5">
+            <summary class="flex cursor-pointer items-center justify-between text-lg font-medium">
+              Is it affiliated with Authzed?
+              <span class="text-slate-500 group-open:rotate-180 transition">▾</span>
+            </summary>
+            <p class="mt-3 text-slate-400">
+              No. SpiceLens is an independent open-source project. SpiceDB is
+              built by <a href="https://authzed.com" class="text-orange-400 hover:underline">Authzed</a>;
+              SpiceLens just talks to it over the same gRPC API that any
+              SpiceDB client uses.
+            </p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────────────────────── FINAL CTA ───────────────────────────── -->
+    <section class="border-t border-slate-900/80 py-24">
+      <div class="container-narrow">
+        <div class="surface relative overflow-hidden p-12 text-center md:p-16">
+          <div
+            class="absolute inset-0 -z-10 opacity-40 blur-3xl"
+            style="
+              background: radial-gradient(
+                closest-side,
+                rgba(249, 115, 22, 0.25),
+                transparent
+              );
+            "
+          ></div>
+          <h2 class="text-3xl font-semibold tracking-tight md:text-5xl">
+            Stop squinting at YAML.
+          </h2>
+          <p class="mx-auto mt-4 max-w-xl text-slate-400">
+            Download SpiceLens, point it at your SpiceDB, and see your
+            permission model the way your users see it.
+          </p>
+          <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <a
+              href="https://github.com/jorgegonzalez/spicelens/releases"
+              class="glow-orange inline-flex items-center gap-2 rounded-lg bg-orange-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-orange-400"
+              >Download — free</a
+            >
+            <a
+              href="https://github.com/jorgegonzalez/spicelens"
+              class="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/60 px-6 py-3 text-sm font-medium text-slate-200 transition hover:bg-slate-800"
+              >View on GitHub</a
+            >
+          </div>
+          <p class="mt-5 text-xs text-slate-500">
+            macOS · Linux · Windows · MIT
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────────────────────── FOOTER ───────────────────────────── -->
+    <footer class="border-t border-slate-900/80 py-12">
+      <div class="container-narrow grid gap-10 text-sm md:grid-cols-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span
+              class="inline-flex h-6 w-6 items-center justify-center rounded border border-orange-500/40 bg-slate-900"
+            >
+              <span class="h-2 w-2 rounded-full bg-orange-500"></span>
+            </span>
+            <span class="font-semibold tracking-tight">SpiceLens</span>
+          </div>
+          <p class="mt-3 text-slate-500">
+            Native desktop GUI for SpiceDB. MIT licensed.
+          </p>
+        </div>
+        <div>
+          <div class="font-medium text-slate-300">Product</div>
+          <ul class="mt-3 space-y-2 text-slate-500">
+            <li><a href="#features" class="hover:text-white">Features</a></li>
+            <li>
+              <a
+                href="https://github.com/jorgegonzalez/spicelens/releases"
+                class="hover:text-white"
+                >Download</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://github.com/jorgegonzalez/spicelens#readme"
+                class="hover:text-white"
+                >Docs</a
+              >
+            </li>
+          </ul>
+        </div>
+        <div>
+          <div class="font-medium text-slate-300">Project</div>
+          <ul class="mt-3 space-y-2 text-slate-500">
+            <li>
+              <a
+                href="https://github.com/jorgegonzalez/spicelens"
+                class="hover:text-white"
+                >GitHub</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://github.com/jorgegonzalez/spicelens/blob/main/LICENSE"
+                class="hover:text-white"
+                >License (MIT)</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://github.com/jorgegonzalez/spicelens/issues"
+                class="hover:text-white"
+                >Report a bug</a
+              >
+            </li>
+          </ul>
+        </div>
+        <div>
+          <div class="font-medium text-slate-300">Support the project</div>
+          <ul class="mt-3 space-y-2 text-slate-500">
+            <li>
+              <a
+                href="https://github.com/sponsors/jorgegonzalez"
+                class="hover:text-white"
+                >♥ GitHub Sponsors</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://buymeacoffee.com/jorgegonzalez"
+                class="hover:text-white"
+                >☕ Buy Me a Coffee</a
+              >
+            </li>
+            <li>
+              <a href="https://probe.example.com/spicelens" class="hover:text-white">
+                Paid support · Probe
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="container-narrow mt-10 flex flex-col items-start justify-between gap-4 border-t border-slate-900 pt-6 text-xs text-slate-600 md:flex-row md:items-center">
+        <div>© 2026 SpiceLens contributors · Not affiliated with Authzed or SpiceDB.</div>
+        <div>SpiceDB is a trademark of Authzed.</div>
+      </div>
+    </footer>
+  </body>
+</html>

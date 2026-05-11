@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: #050911;
+    color: rgb(226 232 240);
+    font-feature-settings: "ss01", "cv11";
+  }
+}
+
+@layer components {
+  .container-narrow {
+    @apply mx-auto max-w-6xl px-6;
+  }
+  .gradient-text {
+    background: linear-gradient(180deg, #fdba74 0%, #f97316 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .glow-orange {
+    box-shadow:
+      0 0 0 1px rgba(249, 115, 22, 0.4),
+      0 8px 40px -8px rgba(249, 115, 22, 0.5);
+  }
+  .surface {
+    @apply rounded-2xl border border-slate-800/80 bg-slate-900/40 backdrop-blur;
+  }
+}
+
+/* Decorative dot grid used behind the hero */
+.dot-grid {
+  background-image: radial-gradient(
+    rgba(148, 163, 184, 0.12) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+  background-position: -1px -1px;
+}
+
+/* Subtle vertical fade so the dot grid melts into the page below */
+.fade-bottom {
+  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+}
