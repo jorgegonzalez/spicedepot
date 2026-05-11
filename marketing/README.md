@@ -19,14 +19,27 @@ npm run build    # → dist/ (deployable as-is to any static host)
 npm run preview  # serve dist/ locally on :4173
 ```
 
-## Deploy
+## Deploy (Vercel)
 
-`dist/` is a fully static bundle — drop it on:
+This subdirectory is configured to deploy on Vercel — see [vercel.json](./vercel.json).
 
-- **Cloudflare Pages** — point at this directory, build command `npm run build`, output `dist`
-- **Vercel / Netlify** — same as above
-- **GitHub Pages** — push `dist/` to a `gh-pages` branch
-- **Any S3-compatible** — `aws s3 sync dist/ s3://bucket --delete`
+**One-time setup:**
+
+1. Go to <https://vercel.com/new>
+2. Import `jorgegonzalez/spicelens`
+3. **Root Directory** → click "Edit" → set to `marketing`
+4. Framework Preset: Vite (auto-detected once Root Directory is set)
+5. Deploy
+
+Vercel will redeploy on every push to `main`. Preview deployments fire on PRs against any other branch.
+
+**Custom domain** (once registered):
+
+In the Vercel project → Settings → Domains → add `spicelens.app`. Vercel will give you the DNS records to set at your registrar. Apex domain via `A` records to Vercel's IP; `www` via `CNAME` to `cname.vercel-dns.com`. HTTPS provisions automatically.
+
+## Alternative hosts
+
+`dist/` is a fully static bundle — Cloudflare Pages, Netlify, S3, etc. all work too. The `vercel.json` headers (asset cache-control) are Vercel-specific but other hosts will just ignore them.
 
 ## Edit
 
