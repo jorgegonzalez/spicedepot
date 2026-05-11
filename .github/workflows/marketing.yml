@@ -1,0 +1,77 @@
+name: Deploy marketing site
+
+# Builds the static marketing site under marketing/ and deploys to GitHub
+# Pages. Fires on any push to main that touches marketing/ (or this
+# workflow itself), and can also be triggered manually from the Actions
+# tab. The Pages site URL is reported in each deployment's environment.
+#
+# One-time setup before the first run:
+#   gh api --method POST /repos/jorgegonzalez/spicelens/pages \
+#     -f "build_type=workflow"
+# (Or in the web UI: Settings → Pages → Source: GitHub Actions.)
+#
+# Custom domain (later, when spicelens.app is bought):
+#   1. Drop a `CNAME` file under marketing/public/ containing the apex
+#      domain (e.g. `spicelens.app` on its own line).
+#   2. Point the apex domain at GitHub Pages IPs (185.199.108.153 etc.)
+#      and the www subdomain at jorgegonzalez.github.io.
+#   3. Settings → Pages → Custom domain → enter the domain, enable HTTPS
+#      after the certificate provisions.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "marketing/**"
+      - ".github/workflows/marketing.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deploy at a time; queue rather than cancel so a release
+# that touches both the app and the marketing site can't lose a deploy.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: marketing/package-lock.json
+
+      - name: Install
+        working-directory: marketing
+        run: npm ci
+
+      - name: Build
+        working-directory: marketing
+        # Pages serves the site under `/spicelens/` (the repo name) unless
+        # a custom domain is configured. Vite's `base` in vite.config.js
+        # is `./` so relative asset URLs work in either case.
+        run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: marketing/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
