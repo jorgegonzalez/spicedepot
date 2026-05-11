@@ -3,6 +3,9 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: light;
+}
+:root.dark {
   color-scheme: dark;
 }
 
@@ -25,6 +28,12 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: rgb(248 250 252); /* slate-50 */
+  color: rgb(15 23 42); /* slate-900 */
+}
+:root.dark body {
+  background-color: rgb(2 6 23); /* slate-950 */
+  color: rgb(241 245 249); /* slate-100 */
 }
 
 /* CodeMirror tweaks */

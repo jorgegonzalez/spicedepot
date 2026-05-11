@@ -93,7 +93,7 @@ export function RelationshipsPage() {
 
   if (!activeConnectionId) {
     return (
-      <div className="p-6 text-sm text-slate-400">
+      <div className="p-6 text-sm text-slate-600 dark:text-slate-400">
         Select a connection from the header to browse relationships.
       </div>
     );
@@ -111,9 +111,9 @@ export function RelationshipsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="border-b border-slate-800 px-4 py-3">
+      <div className="border-b border-slate-200 dark:border-slate-800 px-4 py-3">
         <div className="flex items-center justify-between">
-          <h1 className="text-sm font-medium uppercase tracking-wide text-slate-400">
+          <h1 className="text-sm font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
             Relationships
           </h1>
           <Button
@@ -131,7 +131,7 @@ export function RelationshipsPage() {
       {showAddForm && (
         <form
           onSubmit={onAddSubmit}
-          className="grid gap-3 border-b border-slate-800 bg-slate-900/40 p-4 lg:grid-cols-[1fr_1fr_1fr_auto]"
+          className="grid gap-3 border-b border-slate-200 dark:border-slate-800 bg-slate-100/40 dark:bg-slate-900/40 p-4 lg:grid-cols-[1fr_1fr_1fr_auto]"
         >
           <ObjectFields
             label="Resource"
@@ -167,7 +167,7 @@ export function RelationshipsPage() {
             required
           />
           <div className="flex flex-col gap-2 self-end">
-            <div className="flex items-center gap-2 text-xs text-slate-400">
+            <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
               <label className="flex items-center gap-1">
                 <input
                   type="radio"
@@ -196,7 +196,7 @@ export function RelationshipsPage() {
 
       <form
         onSubmit={onReadSubmit}
-        className="grid gap-3 border-b border-slate-800 p-4 lg:grid-cols-[1fr_1fr_1fr_auto]"
+        className="grid gap-3 border-b border-slate-200 dark:border-slate-800 p-4 lg:grid-cols-[1fr_1fr_1fr_auto]"
       >
         <ObjectFields
           label="Resource filter"
@@ -302,7 +302,7 @@ function ResultsHeader({ data }: { data: ReadRelationshipsOutput | undefined }) 
   if (!data) return null;
   const n = data.items.length;
   return (
-    <div className="border-b border-slate-800 px-4 py-2 text-xs text-slate-500">
+    <div className="border-b border-slate-200 dark:border-slate-800 px-4 py-2 text-xs text-slate-500">
       {n} {n === 1 ? "relationship" : "relationships"}
       {data.read_at && (
         <>
@@ -341,8 +341,8 @@ function RelationshipTable({
   }
   return (
     <table className="w-full text-sm">
-      <thead className="sticky top-0 bg-slate-950">
-        <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500">
+      <thead className="sticky top-0 bg-white dark:bg-slate-950">
+        <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500">
           <th className="px-4 py-2 font-medium">Resource</th>
           <th className="px-4 py-2 font-medium">Relation</th>
           <th className="px-4 py-2 font-medium">Subject</th>
@@ -355,7 +355,7 @@ function RelationshipTable({
           const key = rowKey(rowToInput(row));
           const isDeleting = deletingKey === key;
           return (
-            <tr key={key} className="border-b border-slate-900 font-mono">
+            <tr key={key} className="border-b border-slate-200 dark:border-slate-900 font-mono">
               <td className="px-4 py-1.5">
                 {row.resource_type}:{row.resource_id}
               </td>
@@ -408,7 +408,7 @@ function ObjectFields({
   required?: boolean;
 }) {
   return (
-    <fieldset className="rounded border border-slate-800 p-2">
+    <fieldset className="rounded border border-slate-200 dark:border-slate-800 p-2">
       <legend className="px-1 text-[10px] uppercase tracking-wide text-slate-500">
         {label}
       </legend>
@@ -448,7 +448,7 @@ function SubjectFields({
   required?: boolean;
 }) {
   return (
-    <fieldset className="rounded border border-slate-800 p-2">
+    <fieldset className="rounded border border-slate-200 dark:border-slate-800 p-2">
       <legend className="px-1 text-[10px] uppercase tracking-wide text-slate-500">
         Subject {required ? "" : "filter"}
       </legend>

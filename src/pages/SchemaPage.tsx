@@ -150,7 +150,7 @@ export function SchemaPage() {
 
   if (!activeConnectionId) {
     return (
-      <div className="p-6 text-sm text-slate-400">
+      <div className="p-6 text-sm text-slate-600 dark:text-slate-400">
         Select a connection from the header (or create one in Connections) to
         view its schema.
       </div>
@@ -159,9 +159,9 @@ export function SchemaPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4 py-3">
         <div>
-          <h1 className="text-sm font-medium uppercase tracking-wide text-slate-400">
+          <h1 className="text-sm font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
             Schema
           </h1>
           <p className="text-xs text-slate-500">
@@ -191,14 +191,14 @@ export function SchemaPage() {
       </div>
 
       {schemaQuery.error && (
-        <div className="border-b border-slate-800 p-3">
+        <div className="border-b border-slate-200 dark:border-slate-800 p-3">
           <Banner tone="error">
             Failed to read schema: {(schemaQuery.error as Error).message}
           </Banner>
         </div>
       )}
       {saveError && (
-        <div className="border-b border-slate-800 p-3">
+        <div className="border-b border-slate-200 dark:border-slate-800 p-3">
           <Banner tone="error">Write failed: {saveError}</Banner>
         </div>
       )}

@@ -93,9 +93,9 @@ export function ConnectionsPage() {
 
   return (
     <div className="grid h-full grid-cols-[1fr_420px] gap-0 overflow-hidden">
-      <section className="flex min-h-0 flex-col overflow-hidden border-r border-slate-800">
-        <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-          <h1 className="text-sm font-medium uppercase tracking-wide text-slate-400">
+      <section className="flex min-h-0 flex-col overflow-hidden border-r border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4 py-3">
+          <h1 className="text-sm font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
             Connections
           </h1>
           <Button
@@ -138,7 +138,7 @@ export function ConnectionsPage() {
           )}
         </div>
         {testResult && (
-          <div className="border-t border-slate-800 p-3">
+          <div className="border-t border-slate-200 dark:border-slate-800 p-3">
             <Banner tone={testResult.kind === "ok" ? "success" : "error"}>
               {testResult.message}
             </Banner>
@@ -147,8 +147,8 @@ export function ConnectionsPage() {
       </section>
 
       <aside className="flex min-h-0 flex-col overflow-hidden">
-        <div className="border-b border-slate-800 px-4 py-3">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-400">
+        <div className="border-b border-slate-200 dark:border-slate-800 px-4 py-3">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
             {editingId ? "Edit connection" : "New connection"}
           </h2>
         </div>
@@ -197,7 +197,7 @@ export function ConnectionsPage() {
               placeholder={editingId ? "(unchanged)" : "somerandomkeyhere"}
             />
           </Field>
-          <label className="flex items-center gap-2 text-sm text-slate-300">
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
             <input
               type="checkbox"
               checked={input.insecure}
@@ -254,8 +254,8 @@ function ConnectionRow({
 }) {
   return (
     <li
-      className={`flex items-center justify-between border-b border-slate-800/60 px-4 py-3 ${
-        isEditing ? "bg-slate-900/60" : ""
+      className={`flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 px-4 py-3 ${
+        isEditing ? "bg-slate-100/60 dark:bg-slate-900/60" : ""
       }`}
     >
       <button
@@ -270,7 +270,7 @@ function ConnectionRow({
             </span>
           )}
           {conn.insecure && (
-            <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-400">
+            <span className="rounded bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-600 dark:text-slate-400">
               Insecure
             </span>
           )}

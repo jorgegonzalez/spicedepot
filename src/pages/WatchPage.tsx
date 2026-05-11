@@ -89,7 +89,7 @@ export function WatchPage() {
 
   if (!activeConnectionId) {
     return (
-      <div className="p-6 text-sm text-slate-400">
+      <div className="p-6 text-sm text-slate-600 dark:text-slate-400">
         Select a connection from the header to watch relationship changes.
       </div>
     );
@@ -99,9 +99,9 @@ export function WatchPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex flex-wrap items-end gap-3 border-b border-slate-800 p-4">
+      <div className="flex flex-wrap items-end gap-3 border-b border-slate-200 dark:border-slate-800 p-4">
         <div className="min-w-[280px] flex-1">
-          <label className="mb-1 block text-xs uppercase tracking-wide text-slate-400">
+          <label className="mb-1 block text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">
             Object types (comma-separated, blank = all)
           </label>
           <Input
@@ -163,7 +163,7 @@ function StatusBar({
   count: number;
 }) {
   return (
-    <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-2 text-xs">
+    <div className="flex items-center gap-3 border-b border-slate-200 dark:border-slate-800 px-4 py-2 text-xs">
       <div
         className={`flex items-center gap-1.5 ${
           isRunning ? "text-emerald-300" : "text-slate-500"
@@ -200,10 +200,10 @@ function LogLine({ row }: { row: LogRow }) {
         r.subject_relation ? `#${r.subject_relation}` : ""
       }`;
       return (
-        <div className="flex gap-3 border-b border-slate-900 px-4 py-1.5 hover:bg-slate-900/40">
+        <div className="flex gap-3 border-b border-slate-200 dark:border-slate-900 px-4 py-1.5 hover:bg-slate-900/40">
           <span className="text-slate-500">{time}</span>
           <span className={`w-12 uppercase ${tone}`}>{op}</span>
-          <span className="text-slate-200">
+          <span className="text-slate-800 dark:text-slate-200">
             {r.resource_type}:{r.resource_id}#{r.relation} @ {subject}
           </span>
         </div>
@@ -211,7 +211,7 @@ function LogLine({ row }: { row: LogRow }) {
     }
     case "schema_changed":
       return (
-        <div className="flex gap-3 border-b border-slate-900 px-4 py-1.5 text-amber-300">
+        <div className="flex gap-3 border-b border-slate-200 dark:border-slate-900 px-4 py-1.5 text-amber-300">
           <span className="text-slate-500">{time}</span>
           <span className="w-12 uppercase">schema</span>
           <span>schema updated{row.at && ` (at ${row.at})`}</span>
@@ -219,7 +219,7 @@ function LogLine({ row }: { row: LogRow }) {
       );
     case "ended":
       return (
-        <div className="flex gap-3 border-b border-slate-900 px-4 py-1.5 text-slate-500">
+        <div className="flex gap-3 border-b border-slate-200 dark:border-slate-900 px-4 py-1.5 text-slate-500">
           <span>{time}</span>
           <span className="w-12 uppercase">end</span>
           <span>stream ended</span>
@@ -227,7 +227,7 @@ function LogLine({ row }: { row: LogRow }) {
       );
     case "error":
       return (
-        <div className="flex gap-3 border-b border-slate-900 px-4 py-1.5 text-red-300">
+        <div className="flex gap-3 border-b border-slate-200 dark:border-slate-900 px-4 py-1.5 text-red-300">
           <span className="text-slate-500">{time}</span>
           <span className="w-12 uppercase">error</span>
           <span>{row.message}</span>

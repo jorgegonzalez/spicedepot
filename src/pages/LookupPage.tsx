@@ -59,7 +59,7 @@ export function LookupPage() {
 
   if (!activeConnectionId) {
     return (
-      <div className="p-6 text-sm text-slate-400">
+      <div className="p-6 text-sm text-slate-600 dark:text-slate-400">
         Select a connection from the header to run lookups.
       </div>
     );
@@ -85,19 +85,19 @@ export function LookupPage() {
 
   return (
     <div className="grid h-full grid-cols-[420px_1fr] gap-0 overflow-hidden">
-      <section className="flex min-h-0 flex-col overflow-hidden border-r border-slate-800">
-        <div className="border-b border-slate-800 px-4 py-3">
-          <h1 className="text-sm font-medium uppercase tracking-wide text-slate-400">
+      <section className="flex min-h-0 flex-col overflow-hidden border-r border-slate-200 dark:border-slate-800">
+        <div className="border-b border-slate-200 dark:border-slate-800 px-4 py-3">
+          <h1 className="text-sm font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
             Lookup
           </h1>
-          <div className="mt-2 inline-flex rounded border border-slate-700 p-0.5 text-xs">
+          <div className="mt-2 inline-flex rounded border border-slate-300 dark:border-slate-700 p-0.5 text-xs">
             <button
               type="button"
               onClick={() => setMode("resources")}
               className={`rounded px-3 py-1 transition ${
                 mode === "resources"
-                  ? "bg-slate-800 text-slate-100"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
               }`}
             >
               Find resources
@@ -107,8 +107,8 @@ export function LookupPage() {
               onClick={() => setMode("subjects")}
               className={`rounded px-3 py-1 transition ${
                 mode === "subjects"
-                  ? "bg-slate-800 text-slate-100"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
               }`}
             >
               Find subjects
@@ -181,8 +181,8 @@ function ResultsHeader({
 }) {
   const count = mut.data?.items.length ?? 0;
   return (
-    <div className="border-b border-slate-800 px-4 py-3">
-      <h2 className="text-sm font-medium uppercase tracking-wide text-slate-400">
+    <div className="border-b border-slate-200 dark:border-slate-800 px-4 py-3">
+      <h2 className="text-sm font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
         Results
       </h2>
       {mut.data && (
@@ -231,7 +231,7 @@ function ResourcesForm({
           placeholder="view"
         />
       </Field>
-      <fieldset className="space-y-3 rounded border border-slate-800 p-3">
+      <fieldset className="space-y-3 rounded border border-slate-200 dark:border-slate-800 p-3">
         <legend className="px-1 text-xs uppercase tracking-wide text-slate-500">
           Subject
         </legend>
@@ -295,7 +295,7 @@ function SubjectsForm({
 }) {
   return (
     <>
-      <fieldset className="space-y-3 rounded border border-slate-800 p-3">
+      <fieldset className="space-y-3 rounded border border-slate-200 dark:border-slate-800 p-3">
         <legend className="px-1 text-xs uppercase tracking-wide text-slate-500">
           Resource
         </legend>
@@ -378,7 +378,7 @@ function PermissionshipBadge({ p }: { p: Permissionship }) {
     has_permission: "bg-emerald-950/60 border-emerald-700 text-emerald-200",
     no_permission: "bg-red-950/40 border-red-800 text-red-200",
     conditional_permission: "bg-amber-950/40 border-amber-700 text-amber-200",
-    unspecified: "bg-slate-900 border-slate-700 text-slate-300",
+    unspecified: "bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300",
   }[p];
   const label = {
     has_permission: "Allowed",
@@ -409,8 +409,8 @@ function ResourcesTable({ items }: { items: LookupResourceItem[] }) {
   }
   return (
     <table className="w-full text-sm">
-      <thead className="sticky top-0 bg-slate-950">
-        <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500">
+      <thead className="sticky top-0 bg-white dark:bg-slate-950">
+        <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500">
           <th className="px-4 py-2 font-medium">Resource ID</th>
           <th className="px-4 py-2 font-medium">Permission</th>
           <th className="px-4 py-2 font-medium">Missing context</th>
@@ -420,7 +420,7 @@ function ResourcesTable({ items }: { items: LookupResourceItem[] }) {
         {sorted.map((it) => (
           <tr
             key={it.resource_id}
-            className="border-b border-slate-900 font-mono"
+            className="border-b border-slate-200 dark:border-slate-900 font-mono"
           >
             <td className="px-4 py-1.5">{it.resource_id}</td>
             <td className="px-4 py-1.5">
@@ -452,8 +452,8 @@ function SubjectsTable({ items }: { items: LookupSubjectItem[] }) {
   }
   return (
     <table className="w-full text-sm">
-      <thead className="sticky top-0 bg-slate-950">
-        <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500">
+      <thead className="sticky top-0 bg-white dark:bg-slate-950">
+        <tr className="border-b border-slate-200 dark:border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500">
           <th className="px-4 py-2 font-medium">Subject ID</th>
           <th className="px-4 py-2 font-medium">Permission</th>
           <th className="px-4 py-2 font-medium">Excluded / context</th>
@@ -463,7 +463,7 @@ function SubjectsTable({ items }: { items: LookupSubjectItem[] }) {
         {sorted.map((it) => (
           <tr
             key={it.subject_id}
-            className="border-b border-slate-900 font-mono"
+            className="border-b border-slate-200 dark:border-slate-900 font-mono"
           >
             <td className="px-4 py-1.5">
               {it.subject_id === "*" ? (

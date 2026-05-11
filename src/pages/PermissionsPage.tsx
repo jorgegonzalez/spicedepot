@@ -27,7 +27,7 @@ export function PermissionsPage() {
 
   if (!activeConnectionId) {
     return (
-      <div className="p-6 text-sm text-slate-400">
+      <div className="p-6 text-sm text-slate-600 dark:text-slate-400">
         Select a connection from the header to run permission checks.
       </div>
     );
@@ -43,14 +43,14 @@ export function PermissionsPage() {
 
   return (
     <div className="grid h-full grid-cols-[420px_1fr] gap-0 overflow-hidden">
-      <section className="flex min-h-0 flex-col overflow-hidden border-r border-slate-800">
-        <div className="border-b border-slate-800 px-4 py-3">
-          <h1 className="text-sm font-medium uppercase tracking-wide text-slate-400">
+      <section className="flex min-h-0 flex-col overflow-hidden border-r border-slate-200 dark:border-slate-800">
+        <div className="border-b border-slate-200 dark:border-slate-800 px-4 py-3">
+          <h1 className="text-sm font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
             Check permission
           </h1>
           <p className="mt-1 text-xs text-slate-500">
             Calls{" "}
-            <span className="font-mono text-slate-400">
+            <span className="font-mono text-slate-600 dark:text-slate-400">
               PermissionsService.CheckPermission
             </span>
             . Consistency: fully consistent.
@@ -61,7 +61,7 @@ export function PermissionsPage() {
           onSubmit={onSubmit}
           className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4"
         >
-          <fieldset className="space-y-3 rounded border border-slate-800 p-3">
+          <fieldset className="space-y-3 rounded border border-slate-200 dark:border-slate-800 p-3">
             <legend className="px-1 text-xs uppercase tracking-wide text-slate-500">
               Resource
             </legend>
@@ -98,7 +98,7 @@ export function PermissionsPage() {
             />
           </Field>
 
-          <fieldset className="space-y-3 rounded border border-slate-800 p-3">
+          <fieldset className="space-y-3 rounded border border-slate-200 dark:border-slate-800 p-3">
             <legend className="px-1 text-xs uppercase tracking-wide text-slate-500">
               Subject
             </legend>
@@ -155,8 +155,8 @@ export function PermissionsPage() {
       </section>
 
       <section className="flex min-h-0 flex-col overflow-hidden">
-        <div className="border-b border-slate-800 px-4 py-3">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-400">
+        <div className="border-b border-slate-200 dark:border-slate-800 px-4 py-3">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
             Result
           </h2>
         </div>
@@ -202,8 +202,8 @@ function ResultPanel({
       label: "Conditional",
     },
     unspecified: {
-      bg: "bg-slate-900 border-slate-700",
-      text: "text-slate-300",
+      bg: "bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-700",
+      text: "text-slate-700 dark:text-slate-300",
       label: "Unspecified",
     },
   }[data.permissionship];
@@ -220,7 +220,7 @@ function ResultPanel({
         aria-live="polite"
       >
         <div className={`text-lg font-semibold ${tone.text}`}>{tone.label}</div>
-        <div className="mt-1 font-mono text-xs text-slate-400">
+        <div className="mt-1 font-mono text-xs text-slate-600 dark:text-slate-400">
           {input.resource_type}:{input.resource_id}#{input.permission} @{" "}
           {input.subject_type}:{input.subject_id}
           {subjectSuffix}

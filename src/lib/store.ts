@@ -15,3 +15,23 @@ export const useActiveConnection = create<ActiveConnectionState>()(
     { name: "spicelens.active-connection" },
   ),
 );
+
+export type Theme = "dark" | "light";
+
+interface ThemeState {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+  toggleTheme: () => void;
+}
+
+export const useTheme = create<ThemeState>()(
+  persist(
+    (set, get) => ({
+      theme: "dark",
+      setTheme: (theme) => set({ theme }),
+      toggleTheme: () =>
+        set({ theme: get().theme === "dark" ? "light" : "dark" }),
+    }),
+    { name: "spicelens.theme" },
+  ),
+);
