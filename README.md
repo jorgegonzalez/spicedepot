@@ -9,13 +9,13 @@ A cross-platform desktop GUI for [SpiceDB](https://github.com/authzed/spicedb), 
 - **Connection manager** — save named SpiceDB connections (endpoint, token, TLS on/off). Tokens stored in the OS keychain.
 - **Schema editor** — view and write SpiceDB schemas with syntax highlighting via CodeMirror.
 - **Permission checker** — interactive `CheckPermission` form with fully-consistent reads (the just-written relationship shows up immediately).
+- **Lookup** — `LookupResources` ("which docs can alice view?") and `LookupSubjects` ("who can view doc1?") via a single page with a tab toggle. Results render as a sortable table.
 - **Insecure (plaintext) gRPC** — works correctly out of the box, useful for local-dev SpiceDB.
 - TLS gRPC support via `rustls` (no native OpenSSL dependency).
 
 Roadmap:
 
 - Relationship browser (`ReadRelationships` / `WriteRelationships` / `DeleteRelationships`)
-- Lookup (`LookupResources` / `LookupSubjects`)
 - Watch stream viewer
 
 ## Build from source

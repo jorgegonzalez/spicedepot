@@ -44,6 +44,47 @@ export interface CheckPermissionOutput {
   missing_context: string[];
 }
 
+export interface LookupResourcesInput {
+  resource_type: string;
+  permission: string;
+  subject_type: string;
+  subject_id: string;
+  subject_relation?: string;
+  limit?: number;
+}
+
+export interface LookupResourceItem {
+  resource_id: string;
+  permissionship: Permissionship;
+  missing_context: string[];
+}
+
+export interface LookupResourcesOutput {
+  items: LookupResourceItem[];
+  looked_up_at: string | null;
+}
+
+export interface LookupSubjectsInput {
+  resource_type: string;
+  resource_id: string;
+  permission: string;
+  subject_type: string;
+  subject_relation?: string;
+  limit?: number;
+}
+
+export interface LookupSubjectItem {
+  subject_id: string;
+  permissionship: Permissionship;
+  excluded_subject_ids: string[];
+  missing_context: string[];
+}
+
+export interface LookupSubjectsOutput {
+  items: LookupSubjectItem[];
+  looked_up_at: string | null;
+}
+
 export const api = {
   // Connections
   listConnections: () => invoke<Connection[]>("list_connections"),
@@ -67,6 +108,18 @@ export const api = {
   // Permissions
   checkPermission: (connectionId: string, input: CheckPermissionInput) =>
     invoke<CheckPermissionOutput>("check_permission", {
+      connectionId,
+      input,
+    }),
+
+  // Lookup
+  lookupResources: (connectionId: string, input: LookupResourcesInput) =>
+    invoke<LookupResourcesOutput>("lookup_resources", {
+      connectionId,
+      input,
+    }),
+  lookupSubjects: (connectionId: string, input: LookupSubjectsInput) =>
+    invoke<LookupSubjectsOutput>("lookup_subjects", {
       connectionId,
       input,
     }),

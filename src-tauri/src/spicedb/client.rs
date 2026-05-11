@@ -10,8 +10,10 @@
 
 use crate::error::{AppError, AppResult};
 use crate::spicedb::proto::{
-    CheckPermissionRequest, CheckPermissionResponse, PermissionsServiceClient,
-    ReadSchemaRequest, ReadSchemaResponse, SchemaServiceClient, WriteSchemaRequest,
+    CheckPermissionRequest, CheckPermissionResponse, LookupResourcesRequest,
+    LookupResourcesResponse, LookupSubjectsRequest, LookupSubjectsResponse,
+    PermissionsServiceClient, ReadSchemaRequest, ReadSchemaResponse, SchemaServiceClient,
+    WriteSchemaRequest,
 };
 use http::Uri;
 use tonic::metadata::MetadataValue;
@@ -94,6 +96,40 @@ impl SpiceDbClient {
         let mut svc = self.permissions();
         let resp = svc.check_permission(self.auth(req)).await?;
         Ok(resp.into_inner())
+    }
+
+    /// LookupResources is a server-streaming RPC. For an interactive GUI we
+    /// drain the stream into a Vec rather than threading it through to the
+    /// frontend — SpiceDB caps the response count server-side (default 1000),
+    /// and the latency from waiting for the full response is tolerable for
+    /// what the UI actually needs to render.
+    ///
+    /// If/when we add a "load more" button or want progressive rendering,
+    /// swap this for a Tauri `Channel<T>` emitting each item as it arrives.
+    pub async fn lookup_resources(
+        &self,
+        req: LookupResourcesRequest,
+    ) -> AppResult<Vec<LookupResourcesResponse>> {
+        let mut svc = self.permissions();
+        let mut stream = svc.lookup_resources(self.auth(req)).await?.into_inner();
+        let mut out = Vec::new();
+        while let Some(msg) = stream.message().await? {
+            out.push(msg);
+        }
+        Ok(out)
+    }
+
+    pub async fn lookup_subjects(
+        &self,
+        req: LookupSubjectsRequest,
+    ) -> AppResult<Vec<LookupSubjectsResponse>> {
+        let mut svc = self.permissions();
+        let mut stream = svc.lookup_subjects(self.auth(req)).await?.into_inner();
+        let mut out = Vec::new();
+        while let Some(msg) = stream.message().await? {
+            out.push(msg);
+        }
+        Ok(out)
     }
 
     /// Best-effort liveness check. We try `ReadSchema` and treat `NOT_FOUND`
@@ -392,6 +428,149 @@ mod tests {
             denied.permissionship(),
             Permissionship::NoPermission,
             "bob should be denied"
+        );
+    }
+
+    /// End-to-end Lookup test: schema + several relationships, then verify
+    /// `lookup_resources` enumerates the resources a subject can access and
+    /// `lookup_subjects` enumerates the subjects on a given resource.
+    #[tokio::test]
+    #[ignore]
+    async fn lookup_round_trip() {
+        use crate::spicedb::proto::authzed::api::v1::{
+            relationship_update::Operation as RelOp, ObjectReference, Relationship,
+            RelationshipUpdate, SubjectReference, WriteRelationshipsRequest,
+        };
+        use crate::spicedb::proto::{
+            Consistency, ConsistencyRequirement, LookupResourcesRequest,
+            LookupSubjectsRequest,
+        };
+
+        let endpoint = std::env::var("SPICEDB_TEST_ENDPOINT")
+            .expect("set SPICEDB_TEST_ENDPOINT");
+        let token = std::env::var("SPICEDB_TEST_TOKEN")
+            .expect("set SPICEDB_TEST_TOKEN");
+
+        let client = SpiceDbClient::connect(DialConfig {
+            endpoint,
+            insecure: true,
+            token,
+        })
+        .await
+        .expect("connect");
+
+        client
+            .write_schema(
+                "definition user {}\n\
+                 definition document {\n\
+                     relation viewer: user\n\
+                     permission view = viewer\n\
+                 }\n"
+                .into(),
+            )
+            .await
+            .expect("write_schema");
+
+        // alice can view doc1 and doc2; bob can view doc1 only.
+        let rels = [
+            ("doc1", "alice"),
+            ("doc2", "alice"),
+            ("doc1", "bob"),
+        ];
+        let updates: Vec<RelationshipUpdate> = rels
+            .iter()
+            .map(|(doc, user)| RelationshipUpdate {
+                operation: RelOp::Touch as i32,
+                relationship: Some(Relationship {
+                    resource: Some(ObjectReference {
+                        object_type: "document".into(),
+                        object_id: (*doc).into(),
+                    }),
+                    relation: "viewer".into(),
+                    subject: Some(SubjectReference {
+                        object: Some(ObjectReference {
+                            object_type: "user".into(),
+                            object_id: (*user).into(),
+                        }),
+                        optional_relation: String::new(),
+                    }),
+                    optional_caveat: None,
+                    optional_expires_at: None,
+                }),
+            })
+            .collect();
+        let mut perms = client.permissions();
+        let mut req = tonic::Request::new(WriteRelationshipsRequest {
+            updates,
+            optional_preconditions: Vec::new(),
+            optional_transaction_metadata: None,
+        });
+        req.metadata_mut()
+            .insert("authorization", client.bearer.clone());
+        perms.write_relationships(req).await.expect("write_relationships");
+
+        let consistency = Some(Consistency {
+            requirement: Some(ConsistencyRequirement::FullyConsistent(true)),
+        });
+
+        // LookupResources: which docs can alice view? → doc1, doc2
+        let resources_resp = client
+            .lookup_resources(LookupResourcesRequest {
+                consistency: consistency.clone(),
+                resource_object_type: "document".into(),
+                permission: "view".into(),
+                subject: Some(SubjectReference {
+                    object: Some(ObjectReference {
+                        object_type: "user".into(),
+                        object_id: "alice".into(),
+                    }),
+                    optional_relation: String::new(),
+                }),
+                context: None,
+                optional_limit: 0,
+                optional_cursor: None,
+                with_debug: false,
+            })
+            .await
+            .expect("lookup_resources");
+        let mut got_resources: Vec<String> = resources_resp
+            .iter()
+            .map(|r| r.resource_object_id.clone())
+            .collect();
+        got_resources.sort();
+        assert_eq!(
+            got_resources,
+            vec!["doc1".to_string(), "doc2".to_string()],
+            "alice should be able to view exactly doc1 and doc2"
+        );
+
+        // LookupSubjects: who can view doc1? → alice, bob
+        let subjects_resp = client
+            .lookup_subjects(LookupSubjectsRequest {
+                consistency,
+                resource: Some(ObjectReference {
+                    object_type: "document".into(),
+                    object_id: "doc1".into(),
+                }),
+                permission: "view".into(),
+                subject_object_type: "user".into(),
+                optional_subject_relation: String::new(),
+                context: None,
+                optional_concrete_limit: 0,
+                optional_cursor: None,
+                wildcard_option: 0,
+            })
+            .await
+            .expect("lookup_subjects");
+        let mut got_subjects: Vec<String> = subjects_resp
+            .iter()
+            .filter_map(|r| r.subject.as_ref().map(|s| s.subject_object_id.clone()))
+            .collect();
+        got_subjects.sort();
+        assert_eq!(
+            got_subjects,
+            vec!["alice".to_string(), "bob".to_string()],
+            "doc1 should be viewable by alice and bob"
         );
     }
 }

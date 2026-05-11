@@ -171,11 +171,17 @@ The next features (permission checker, relationship browser, lookup) follow the 
 2. ✅ Schema read/write
 3. ✅ Permission checker (`CheckPermission`)
 4. ☐ Relationship browser (`ReadRelationships` / `WriteRelationships` / `DeleteRelationships`)
-5. ☐ Lookup (`LookupResources`, `LookupSubjects`)
+5. ✅ Lookup (`LookupResources`, `LookupSubjects`)
 6. ☐ Watch stream viewer
 
-Each gets its own page + commands; the gRPC client already exposes `permissions()`. For the relationship browser, plan on streaming responses — wire a Tokio mpsc channel to a Tauri `Channel<T>` so the UI can render rows incrementally.
+Each gets its own page + commands; the gRPC client exposes `permissions()` for everything in the authz family. For the relationship browser, plan on streaming responses — wire a Tokio mpsc channel to a Tauri `Channel<T>` so the UI can render rows incrementally. (The current lookup implementation drains the stream into a Vec inside Rust before returning — fine for the SpiceDB-default 1000-result cap, swap to incremental once we need it.)
 
-## CheckPermission: consistency choice
+## CheckPermission and Lookup: consistency choice
 
-`commands::permissions::check_permission` sends `Consistency = FullyConsistent(true)` on every call. SpiceDB's default (`MinimizeLatency`) reads from any snapshot and can return a stale result — surprising in an interactive tool where the user has just written a relationship and is testing the effect. The integration test `check_permission_with_relationship` exercises this exact ordering and would fail without `FullyConsistent`. If lookup/relationship-browser commands need different consistency semantics, set them per-command rather than relaxing this default.
+Every authz read (`CheckPermission`, `LookupResources`, `LookupSubjects`) sends `Consistency = FullyConsistent(true)`. SpiceDB's default (`MinimizeLatency`) reads from any snapshot and can return a stale result — surprising in an interactive tool where the user has just written a relationship and is testing the effect. The `check_permission_with_relationship` and `lookup_round_trip` integration tests both exercise this exact ordering and would fail without `FullyConsistent`. If a future command needs different consistency semantics, set it per-command rather than relaxing this default.
+
+## Server-streaming lookups
+
+`PermissionsService.LookupResources` and `LookupSubjects` are server-streaming RPCs. The current implementation drains the stream into a `Vec` inside `SpiceDbClient::{lookup_resources, lookup_subjects}` before returning, so the Tauri command is a single round-trip from the frontend's perspective. SpiceDB caps server-side response counts (default 1000) and our optional `limit` field can request fewer.
+
+If/when we want progressive rendering (large result sets, "load more" pagination, etc.), swap the `Vec` for a `tauri::ipc::Channel<T>`: spawn the streaming RPC in a Tokio task and send each item as it arrives. The frontend `useMutation` would become a subscription pattern. Not worth the complexity yet.

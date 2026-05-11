@@ -1,4 +1,5 @@
 pub mod connections;
+pub mod lookup;
 pub mod permissions;
 pub mod schema;
 

@@ -30,6 +30,8 @@ pub use authzed::api::v1::{
     consistency::Requirement as ConsistencyRequirement,
     permissions_service_client::PermissionsServiceClient,
     schema_service_client::SchemaServiceClient,
-    CheckPermissionRequest, CheckPermissionResponse, Consistency, ObjectReference,
-    ReadSchemaRequest, ReadSchemaResponse, SubjectReference, WriteSchemaRequest,
+    CheckPermissionRequest, CheckPermissionResponse, Consistency, LookupResourcesRequest,
+    LookupResourcesResponse, LookupSubjectsRequest, LookupSubjectsResponse,
+    ObjectReference, ReadSchemaRequest, ReadSchemaResponse, SubjectReference,
+    WriteSchemaRequest,
 };

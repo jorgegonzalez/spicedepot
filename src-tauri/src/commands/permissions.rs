@@ -25,6 +25,9 @@ pub struct CheckPermissionInput {
 
 /// Frontend-friendly Permissionship. We avoid sending the proto enum's
 /// `PERMISSIONSHIP_*` names to the UI — they're noisy.
+///
+/// Shared with `commands::lookup` — both `CheckPermission` and the lookup
+/// RPCs return the same `Permissionship` enum on the wire.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Permissionship {
@@ -33,6 +36,17 @@ pub enum Permissionship {
     /// Permission depends on a caveat that needs more context to evaluate.
     ConditionalPermission,
     Unspecified,
+}
+
+impl From<ProtoPermissionship> for Permissionship {
+    fn from(p: ProtoPermissionship) -> Self {
+        match p {
+            ProtoPermissionship::HasPermission => Self::HasPermission,
+            ProtoPermissionship::NoPermission => Self::NoPermission,
+            ProtoPermissionship::ConditionalPermission => Self::ConditionalPermission,
+            ProtoPermissionship::Unspecified => Self::Unspecified,
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -79,14 +93,7 @@ pub async fn check_permission(
         };
         let resp = client.check_permission(req).await?;
 
-        let permissionship = match resp.permissionship() {
-            ProtoPermissionship::HasPermission => Permissionship::HasPermission,
-            ProtoPermissionship::NoPermission => Permissionship::NoPermission,
-            ProtoPermissionship::ConditionalPermission => {
-                Permissionship::ConditionalPermission
-            }
-            ProtoPermissionship::Unspecified => Permissionship::Unspecified,
-        };
+        let permissionship: Permissionship = resp.permissionship().into();
         let checked_at = resp.checked_at.map(|t| t.token);
         let missing_context = resp
             .partial_caveat_info
