@@ -89,9 +89,31 @@ jobs:
               - Windows (x64): `*.msi` / `*-setup.exe`
 
             See the release notes below for changes in this version.
-          # Auto-publish so the update-tap workflow can listen for the
-          # `release: published` event. Flip this back to true if you want
-          # a manual review gate before each release goes live.
+          # Auto-publish so the build chain is one-shot from tag push.
+          # Flip this back to true if you want a manual review gate before
+          # each release goes live.
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+  # GITHUB_TOKEN-created releases don't fire the `release: published`
+  # event for other workflows (GitHub's recursion guard). So after the
+  # matrix builds finish, we explicitly dispatch the tap-update workflow.
+  # `workflow_dispatch` IS allowed from GITHUB_TOKEN — it's the documented
+  # escape hatch for exactly this case.
+  dispatch-tap-update:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Trigger Homebrew tap sync
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          gh workflow run update-tap.yml \
+            --repo ${{ github.repository }} \
+            --ref main \
+            -f tag="$TAG"
+          echo "Dispatched update-tap.yml with tag=$TAG"
