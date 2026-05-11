@@ -19,6 +19,8 @@ protoc-bin-vendored = "3"
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-store = "2"
+# For opening external URLs (sponsor links) in the system browser.
+tauri-plugin-opener = "2"
 
 # gRPC
 tonic = { version = "0.12", default-features = false, features = ["transport", "codegen", "prost", "tls", "tls-roots"] }

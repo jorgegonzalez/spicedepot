@@ -1,8 +1,14 @@
 import { useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { api } from "@/lib/api";
 import { useActiveConnection } from "@/lib/store";
+import {
+  BUY_ME_A_COFFEE_URL,
+  GITHUB_SPONSORS_URL,
+  PROBE_SUPPORT_URL,
+} from "@/lib/support";
 
 const navItems = [
   { to: "/connections", label: "Connections" },
@@ -90,6 +96,49 @@ export function AppShell() {
       <main className="min-h-0 flex-1 overflow-hidden">
         <Outlet />
       </main>
+      <SupportFooter />
     </div>
+  );
+}
+
+function SupportFooter() {
+  const open = (url: string) => () => {
+    // Tauri plugin-opener fires the system "open URL" handler, which lands
+    // in Safari / Chrome / Firefox depending on the user's default.
+    openUrl(url).catch(() => {
+      // Last-ditch fallback if the opener plugin isn't available for some
+      // reason — most browsers will at least navigate to the URL.
+      window.open(url, "_blank", "noopener,noreferrer");
+    });
+  };
+  return (
+    <footer className="flex items-center justify-between gap-4 border-t border-slate-800 bg-slate-950 px-4 py-1.5 text-xs text-slate-500">
+      <div>
+        <span>SpiceLens · open source (MIT)</span>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="text-slate-600">Like this tool?</span>
+        <button
+          onClick={open(GITHUB_SPONSORS_URL)}
+          className="rounded px-1.5 py-0.5 transition hover:bg-slate-800 hover:text-slate-200"
+        >
+          ♥ Sponsor
+        </button>
+        <button
+          onClick={open(BUY_ME_A_COFFEE_URL)}
+          className="rounded px-1.5 py-0.5 transition hover:bg-slate-800 hover:text-slate-200"
+        >
+          ☕ Buy me a coffee
+        </button>
+        <span className="text-slate-700">·</span>
+        <button
+          onClick={open(PROBE_SUPPORT_URL)}
+          className="rounded px-1.5 py-0.5 transition hover:bg-slate-800 hover:text-slate-200"
+          title="Paid support via Probe"
+        >
+          Paid support →
+        </button>
+      </div>
+    </footer>
   );
 }

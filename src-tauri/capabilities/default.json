@@ -5,6 +5,14 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "store:default"
+    "store:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://github.com/*" },
+        { "url": "https://buymeacoffee.com/*" },
+        { "url": "https://probe.example.com/*" }
+      ]
+    }
   ]
 }

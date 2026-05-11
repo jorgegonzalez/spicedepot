@@ -69,6 +69,16 @@ Every PR runs three jobs in [`.github/workflows/ci.yml`](.github/workflows/ci.ym
 
 The Rust job stubs out `dist/` because `tauri::generate_context!` insists the directory exist at compile time even though `cargo check` doesn't need Vite output.
 
+## Support the project
+
+SpiceLens is free and open source under the MIT license. If it saves you time, a few ways to keep it healthy:
+
+- ♥ **[GitHub Sponsors](https://github.com/sponsors/REPLACE_ME)** — recurring support, listed in the repo
+- ☕ **[Buy me a coffee](https://buymeacoffee.com/REPLACE_ME)** — one-off thanks
+- **[Probe](https://probe.example.com/spicelens)** — paid commercial support, priority issues, and custom features
+
+The same links live in the app's footer.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
