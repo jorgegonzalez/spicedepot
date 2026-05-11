@@ -7,7 +7,3 @@ export const GITHUB_SPONSORS_URL =
 
 export const BUY_ME_A_COFFEE_URL =
   "https://buymeacoffee.com/jorgegonzalez";
-
-/** Probe — paid / commercial support. TODO: replace with real Probe URL. */
-export const PROBE_SUPPORT_URL =
-  "https://probe.example.com/spicelens";

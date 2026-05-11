@@ -7,7 +7,6 @@ import { useActiveConnection, useTheme } from "@/lib/store";
 import {
   BUY_ME_A_COFFEE_URL,
   GITHUB_SPONSORS_URL,
-  PROBE_SUPPORT_URL,
 } from "@/lib/support";
 
 const navItems = [
@@ -151,14 +150,6 @@ function SupportFooter() {
           className="rounded px-1.5 py-0.5 transition hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-200"
         >
           ☕ Buy me a coffee
-        </button>
-        <span className="text-slate-300 dark:text-slate-700">·</span>
-        <button
-          onClick={open(PROBE_SUPPORT_URL)}
-          className="rounded px-1.5 py-0.5 transition hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-200"
-          title="Paid support via Probe"
-        >
-          Paid support →
         </button>
       </div>
     </footer>

@@ -1,5 +1,3 @@
 # GitHub renders a "Sponsor" button on the repo using this file.
 github: [jorgegonzalez]
 buy_me_a_coffee: jorgegonzalez
-custom:
-  - "https://probe.example.com/spicelens"  # TODO: real Probe URL
