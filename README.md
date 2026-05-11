@@ -73,8 +73,8 @@ The Rust job stubs out `dist/` because `tauri::generate_context!` insists the di
 
 SpiceLens is free and open source under the MIT license. If it saves you time, a few ways to keep it healthy:
 
-- ♥ **[GitHub Sponsors](https://github.com/sponsors/REPLACE_ME)** — recurring support, listed in the repo
-- ☕ **[Buy me a coffee](https://buymeacoffee.com/REPLACE_ME)** — one-off thanks
+- ♥ **[GitHub Sponsors](https://github.com/sponsors/jorgegonzalez)** — recurring support, listed in the repo
+- ☕ **[Buy me a coffee](https://buymeacoffee.com/jorgegonzalez)** — one-off thanks
 - **[Probe](https://probe.example.com/spicelens)** — paid commercial support, priority issues, and custom features
 
 The same links live in the app's footer.

@@ -1,7 +1,5 @@
 # GitHub renders a "Sponsor" button on the repo using this file.
-# Replace the placeholder handles with your actual usernames before the
-# repo goes public.
-github: [REPLACE_ME]                     # https://github.com/sponsors/<user>
-buy_me_a_coffee: REPLACE_ME              # https://buymeacoffee.com/<user>
+github: [jorgegonzalez]
+buy_me_a_coffee: jorgegonzalez            # TODO: confirm the BMC handle
 custom:
-  - "https://probe.example.com/spicelens"  # Probe — paid support
+  - "https://probe.example.com/spicelens"  # TODO: real Probe URL
