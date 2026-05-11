@@ -92,7 +92,7 @@ impl ConnectionStore {
 
     pub fn list(&self) -> AppResult<Vec<Connection>> {
         let mut v: Vec<Connection> = self.read_all()?.into_values().collect();
-        v.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        v.sort_by_key(|a| a.created_at);
         Ok(v)
     }
 
