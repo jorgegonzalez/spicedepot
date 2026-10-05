@@ -112,7 +112,7 @@ jobs:
             -p 50051:50051 \
             authzed/spicedb:v1.52.0 \
             serve \
-              --grpc-preshared-key=spicelens-ci-key \
+              --grpc-preshared-key=spicedepot-ci-key \
               --datastore-engine=memory \
               --http-enabled=false \
               --metrics-enabled=false \
@@ -135,7 +135,7 @@ jobs:
         working-directory: src-tauri
         env:
           SPICEDB_TEST_ENDPOINT: localhost:50051
-          SPICEDB_TEST_TOKEN: spicelens-ci-key
+          SPICEDB_TEST_TOKEN: spicedepot-ci-key
         run: cargo test --lib -- --ignored --test-threads=1 --nocapture
 
       - name: SpiceDB logs (on failure)

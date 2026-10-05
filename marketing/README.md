@@ -1,6 +1,6 @@
-# SpiceLens marketing site
+# SpiceDepot marketing site
 
-Static site for [spicelens.app](https://spicelens.app) (or wherever this ends up deployed). Plain HTML + Tailwind v3 + Vite. No framework — the FAQ uses native `<details>`/`<summary>` and the rest is pure layout.
+Marketing site for [spicedepot.app](https://spicedepot.app), built with plain HTML, Tailwind CSS, and Vite. The FAQ uses native `<details>` and `<summary>` elements.
 
 ## Develop
 
@@ -26,16 +26,16 @@ This subdirectory is configured to deploy on Vercel — see [vercel.json](./verc
 **One-time setup:**
 
 1. Go to <https://vercel.com/new>
-2. Import `jorgegonzalez/spicelens`
+2. Import the GitHub repository `jorgegonzalez/spicedepot`
 3. **Root Directory** → click "Edit" → set to `marketing`
 4. Framework Preset: Vite (auto-detected once Root Directory is set)
 5. Deploy
 
 Vercel will redeploy on every push to `main`. Preview deployments fire on PRs against any other branch.
 
-**Custom domain** (once registered):
+**Custom domain**:
 
-In the Vercel project → Settings → Domains → add `spicelens.app`. Vercel will give you the DNS records to set at your registrar. Apex domain via `A` records to Vercel's IP; `www` via `CNAME` to `cname.vercel-dns.com`. HTTPS provisions automatically.
+The apex (`spicedepot.app`) and `www` domains are attached to the Vercel project. In Cloudflare DNS, both use `A` records pointing to `76.76.21.21` with proxying disabled. Vercel provisions HTTPS after DNS verification.
 
 ## Alternative hosts
 

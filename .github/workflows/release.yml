@@ -79,7 +79,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.event.inputs.tag || github.ref_name }}
-          releaseName: "SpiceLens ${{ github.event.inputs.tag || github.ref_name }}"
+          releaseName: "SpiceDepot ${{ github.event.inputs.tag || github.ref_name }}"
           releaseBody: |
             Cross-platform desktop GUI for SpiceDB.
 

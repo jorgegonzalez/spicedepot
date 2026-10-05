@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Architecture and conventions for working on SpiceLens. Read this before adding features.
+Architecture and conventions for working on SpiceDepot. Read this before adding features.
 
 ## What this is
 
@@ -42,7 +42,7 @@ A cross-platform desktop GUI for [SpiceDB](https://github.com/authzed/spicedb), 
 │   ├── icons/              app icons
 │   ├── proto/              vendored .proto files (see "Updating protos" below)
 │   └── src/
-│       ├── main.rs         calls `spicelens_lib::run()`
+│       ├── main.rs         calls `spicedepot_lib::run()`
 │       ├── lib.rs          Tauri builder, plugins, command registration
 │       ├── error.rs        AppError + AppResult — single error type for commands
 │       ├── connections.rs  ConnectionStore (store + keyring)

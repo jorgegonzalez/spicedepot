@@ -324,7 +324,7 @@ mod tests {
     /// doesn't run in plain `cargo test`.
     ///
     ///   SPICEDB_TEST_ENDPOINT=localhost:50051 \
-    ///   SPICEDB_TEST_TOKEN=spicelens-test-key \
+    ///   SPICEDB_TEST_TOKEN=spicedepot-test-key \
     ///   cargo test -- --ignored insecure_roundtrip
     #[tokio::test]
     #[ignore]

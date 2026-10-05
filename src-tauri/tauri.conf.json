@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "SpiceLens",
+  "productName": "SpiceDepot",
   "version": "0.1.0",
   "identifier": "dev.spicelens.app",
   "build": {
@@ -13,7 +13,7 @@
     "withGlobalTauri": false,
     "windows": [
       {
-        "title": "SpiceLens",
+        "title": "SpiceDepot",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
@@ -38,6 +38,6 @@
     ],
     "category": "DeveloperTool",
     "shortDescription": "Cross-platform SpiceDB GUI",
-    "longDescription": "SpiceLens is a desktop GUI for managing SpiceDB schemas, relationships, and permission checks."
+    "longDescription": "SpiceDepot is a desktop GUI for managing SpiceDB schemas, relationships, and permission checks."
   }
 }

@@ -1,6 +1,6 @@
-# Releasing SpiceLens
+# Releasing SpiceDepot
 
-End-to-end release flow: tag → built binaries → GitHub Release → Homebrew tap auto-updated.
+Releases are built and published by GitHub Actions when a version tag is pushed. The release workflow builds macOS universal, Linux x64, and Windows x64 packages, publishes them to GitHub Releases, then updates the Homebrew tap.
 
 ## Prereqs (one-time setup)
 
@@ -18,7 +18,7 @@ Generate at <https://github.com/settings/personal-access-tokens/new>:
 Add to this repo as the secret `HOMEBREW_TAP_TOKEN`:
 
 ```bash
-gh secret set HOMEBREW_TAP_TOKEN --repo jorgegonzalez/spicelens
+gh secret set HOMEBREW_TAP_TOKEN --repo jorgegonzalez/spicedepot
 # paste the PAT
 ```
 
@@ -52,9 +52,9 @@ git push origin main vX.Y.Z
 
 That's it. The pipeline:
 
-1. **`.github/workflows/release.yml`** triggers on the tag push. Matrix builds for macOS universal (Apple Silicon + Intel), Linux x64, Windows x64. Uploads artifacts to a GitHub Release titled `SpiceLens vX.Y.Z`. Since `releaseDraft: false`, the release auto-publishes.
-2. **`.github/workflows/update-tap.yml`** triggers on the `release: published` event. Downloads `SpiceLens_X.Y.Z_universal.dmg`, computes SHA256, rewrites the cask in `jorgegonzalez/homebrew-tap`, pushes.
-3. End-users can run `brew install --cask jorgegonzalez/tap/spicelens` (or `brew upgrade --cask spicelens` if they already had it).
+1. **`.github/workflows/release.yml`** triggers on the tag push. Matrix builds for macOS universal (Apple Silicon + Intel), Linux x64, Windows x64. Uploads artifacts to a GitHub Release titled `SpiceDepot vX.Y.Z`. Since `releaseDraft: false`, the release auto-publishes.
+2. **`.github/workflows/update-tap.yml`** triggers on the `release: published` event. Downloads `SpiceDepot_X.Y.Z_universal.dmg`, computes SHA256, rewrites the cask in `jorgegonzalez/homebrew-tap`, pushes.
+3. End-users can run `brew install --cask jorgegonzalez/tap/spicedepot` (or `brew upgrade --cask spicedepot` if they already had it).
 
 Total time tag-to-installable: ~25 minutes (most of it in the cross-platform matrix build).
 
@@ -63,14 +63,14 @@ Total time tag-to-installable: ~25 minutes (most of it in the cross-platform mat
 ```bash
 # Tap install works
 brew tap jorgegonzalez/tap
-brew install --cask spicelens
-open -a SpiceLens
+brew install --cask spicedepot
+open -a SpiceDepot
 
 # Or upgrade an existing install
-brew upgrade --cask spicelens
+brew upgrade --cask spicedepot
 ```
 
-If `brew install` reports an old version, the `update-tap.yml` run probably failed. Check [Actions on the tap repo](https://github.com/jorgegonzalez/homebrew-tap/commits/main) — every release should produce a "spicelens vX.Y.Z" commit there.
+If `brew install` reports an old version, the `update-tap.yml` run probably failed. Check [Actions on the tap repo](https://github.com/jorgegonzalez/homebrew-tap/commits/main) — every release should produce a "spicedepot vX.Y.Z" commit there.
 
 ## Manually re-sync the tap
 
@@ -82,11 +82,11 @@ The workflow's `workflow_dispatch` input takes any existing release tag and re-r
 
 ## Promoting to `homebrew-cask` (official)
 
-Once releases are signed + notarized (see Apple section above), you can submit the cask to [homebrew/homebrew-cask](https://github.com/Homebrew/homebrew-cask) so users get `brew install --cask spicelens` without the tap step:
+Once releases are signed + notarized (see Apple section above), you can submit the cask to [homebrew/homebrew-cask](https://github.com/Homebrew/homebrew-cask) so users get `brew install --cask spicedepot` without the tap step:
 
 1. Fork `homebrew/homebrew-cask`
-2. Copy `Casks/spicelens.rb` from our tap into `Casks/s/spicelens.rb` (note: subdirectory by first letter)
-3. Run `brew audit --new spicelens` locally; fix anything it flags
+2. Copy `Casks/spicedepot.rb` from our tap into `Casks/s/spicedepot.rb` (note: subdirectory by first letter)
+3. Run `brew audit --new spicedepot` locally; fix anything it flags
 4. Open a PR. Expect review feedback; iterate.
 
-After acceptance, drop our tap from the install instructions and just say `brew install --cask spicelens`.
+After acceptance, drop our tap from the install instructions and just say `brew install --cask spicedepot`.

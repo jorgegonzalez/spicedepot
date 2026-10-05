@@ -3,7 +3,7 @@ name: Update Homebrew tap
 # Fires when a release is published on this repo (either by the release.yml
 # workflow auto-publishing or by you manually flipping a draft to published
 # in the Releases UI). Downloads the universal-macOS DMG, computes its
-# SHA256, rewrites the spicelens cask in jorgegonzalez/homebrew-tap, and
+# SHA256, rewrites the spicedepot cask in jorgegonzalez/homebrew-tap, and
 # pushes the change.
 #
 # Required secret on this repo:
@@ -55,13 +55,13 @@ jobs:
           VERSION="${{ steps.rel.outputs.version }}"
           # Tauri's universal-apple-darwin bundle filename:
           #   <productName>_<version>_universal.dmg
-          # productName is "SpiceLens" (from tauri.conf.json).
-          FILENAME="SpiceLens_${VERSION}_universal.dmg"
+          # productName is "SpiceDepot" (from tauri.conf.json).
+          FILENAME="SpiceDepot_${VERSION}_universal.dmg"
           URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${FILENAME}"
           echo "URL: $URL"
-          curl -sSfL -o spicelens.dmg "$URL"
-          SHA=$(sha256sum spicelens.dmg | awk '{print $1}')
-          SIZE=$(stat -c %s spicelens.dmg)
+          curl -sSfL -o spicedepot.dmg "$URL"
+          SHA=$(sha256sum spicedepot.dmg | awk '{print $1}')
+          SIZE=$(stat -c %s spicedepot.dmg)
           echo "SHA256=$SHA · size=$SIZE bytes"
           echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
 
@@ -72,22 +72,22 @@ jobs:
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           path: tap
 
-      - name: Rewrite Casks/spicelens.rb
+      - name: Rewrite Casks/spicedepot.rb
         run: |
           VERSION="${{ steps.rel.outputs.version }}"
           SHA256="${{ steps.dmg.outputs.sha256 }}"
-          cat > tap/Casks/spicelens.rb <<EOF
-          cask "spicelens" do
-            # Managed by the update-tap workflow in jorgegonzalez/spicelens.
+          cat > tap/Casks/spicedepot.rb <<EOF
+          cask "spicedepot" do
+            # Managed by the update-tap workflow in jorgegonzalez/spicedepot.
             # Manual edits get overwritten on the next release.
             version "${VERSION}"
             sha256 "${SHA256}"
 
-            url "https://github.com/jorgegonzalez/spicelens/releases/download/v#{version}/SpiceLens_#{version}_universal.dmg",
-                verified: "github.com/jorgegonzalez/spicelens/"
-            name "SpiceLens"
+          url "https://github.com/jorgegonzalez/spicedepot/releases/download/v#{version}/SpiceDepot_#{version}_universal.dmg",
+              verified: "github.com/jorgegonzalez/spicedepot/"
+            name "SpiceDepot"
             desc "Native desktop GUI for SpiceDB"
-            homepage "https://github.com/jorgegonzalez/spicelens"
+          homepage "https://github.com/jorgegonzalez/spicedepot"
 
             livecheck do
               url :url
@@ -96,7 +96,7 @@ jobs:
 
             auto_updates true
 
-            app "SpiceLens.app"
+            app "SpiceDepot.app"
 
             zap trash: [
               "~/Library/Application Support/dev.spicelens.app",
@@ -108,21 +108,21 @@ jobs:
           end
           EOF
           echo "---"
-          cat tap/Casks/spicelens.rb
+          cat tap/Casks/spicedepot.rb
 
       - name: Commit + push tap update
         working-directory: tap
         run: |
           git config user.name  "Jorge Gonzalez"
           git config user.email "jorgegonzalez@users.noreply.github.com"
-          if git diff --quiet Casks/spicelens.rb; then
+          if git diff --quiet Casks/spicedepot.rb; then
             echo "No changes — tap already at this version."
             exit 0
           fi
-          git add Casks/spicelens.rb
-          git commit -m "spicelens ${{ steps.rel.outputs.version }}
+          git add Casks/spicedepot.rb
+          git commit -m "spicedepot ${{ steps.rel.outputs.version }}
 
-          Auto-updated by jorgegonzalez/spicelens release workflow.
+          Auto-updated by jorgegonzalez/spicedepot release workflow.
 
           Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
           git push

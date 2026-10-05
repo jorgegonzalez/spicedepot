@@ -18,9 +18,8 @@ use tauri_plugin_store::StoreExt;
 
 const STORE_FILE: &str = "connections.json";
 const STORE_KEY: &str = "connections";
-/// Must match the `identifier` in `tauri.conf.json` so the keychain entry
-/// namespace stays stable across builds. If you rename the bundle, rename
-/// here too — otherwise existing users' tokens become orphaned.
+/// Keep this legacy service name stable when changing the product branding,
+/// so existing users' saved tokens remain available after an upgrade.
 const KEYRING_SERVICE: &str = "dev.spicelens.app";
 
 /// Public-facing connection record. Token never round-trips through this struct.

@@ -109,7 +109,7 @@ export function RelationshipsPage() {
     }
     const csv = formatCsv(rows);
     const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    downloadText(`spicelens-relationships-${stamp}.csv`, csv);
+    downloadText(`spicedepot-relationships-${stamp}.csv`, csv);
   };
 
   const onImportFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {

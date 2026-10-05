@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    spicelens_lib::run();
+    spicedepot_lib::run();
 }

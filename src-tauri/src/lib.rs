@@ -1,4 +1,4 @@
-//! SpiceLens Tauri application library.
+//! SpiceDepot Tauri application library.
 //!
 //! Architecture (high level):
 //! - `spicedb::proto` — generated tonic + prost code for the authzed gRPC API.
@@ -34,7 +34,7 @@ pub fn run() {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "spicelens_lib=info,warn".into()),
+                .unwrap_or_else(|_| "spicedepot_lib=info,warn".into()),
         )
         .init();
 

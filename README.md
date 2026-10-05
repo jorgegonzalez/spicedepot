@@ -1,4 +1,4 @@
-# SpiceLens
+# SpiceDepot
 
 A cross-platform desktop GUI for [SpiceDB](https://github.com/authzed/spicedb), built with Tauri 2 + Rust + React.
 
@@ -6,18 +6,17 @@ A cross-platform desktop GUI for [SpiceDB](https://github.com/authzed/spicedb), 
 
 ## Install
 
-### macOS — Homebrew (easiest)
+### Homebrew
+
+Install the desktop app with Homebrew after the first SpiceDepot release:
 
 ```bash
-brew tap jorgegonzalez/tap
-brew install --cask spicelens
+brew install --cask jorgegonzalez/tap/spicedepot
 ```
-
-Auto-updates via `brew upgrade --cask spicelens`.
 
 ### Pre-built binaries
 
-Every release on the [Releases page](https://github.com/jorgegonzalez/spicelens/releases) ships:
+The existing releases were published under the former SpiceLens name. They include:
 
 - macOS universal `.dmg` (Apple Silicon + Intel)
 - Linux `.AppImage` + `.deb` (x64)
@@ -78,19 +77,13 @@ Proto files are vendored under `src-tauri/proto/` for reproducible builds. To re
 
 The script downloads pinned versions of the [authzed/api](https://github.com/authzed/api) protos and their transitive dependencies. Edit the `*_REF` variables at the top of the script to bump versions.
 
-## CI
+## CI status
 
-Every PR runs three jobs in [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
-
-1. **Rust** — `cargo build --all-targets`, `clippy --no-deps -- -D warnings`, `cargo test --lib`
-2. **Frontend** — `pnpm typecheck` + `pnpm build`
-3. **Integration** — spins up SpiceDB v1.52.0 as a service container and runs the `#[ignore]`'d gRPC tests against it (`cargo test --lib -- --ignored`)
-
-The Rust job stubs out `dist/` because `tauri::generate_context!` insists the directory exist at compile time even though `cargo check` doesn't need Vite output.
+GitHub Actions runs the continuous integration and release workflows in this repository. Tagged releases build desktop packages for macOS, Linux, and Windows; the release workflow also updates the Homebrew tap.
 
 ## Support the project
 
-SpiceLens is free and open source under the Apache 2.0 license. If it saves you time, a couple of ways to keep it healthy:
+SpiceDepot is free and open source under the Apache 2.0 license. If it saves you time, a couple of ways to keep it healthy:
 
 - ♥ **[GitHub Sponsors](https://github.com/sponsors/jorgegonzalez)** — recurring support, listed in the repo
 - ☕ **[Buy me a coffee](https://buymeacoffee.com/jorgegonzalez)** — one-off thanks
