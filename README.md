@@ -86,7 +86,7 @@ GitHub Actions runs the continuous integration and release workflows in this rep
 SpiceDepot is free and open source under the Apache 2.0 license. If it saves you time, a couple of ways to keep it healthy:
 
 - ♥ **[GitHub Sponsors](https://github.com/sponsors/jorgegonzalez)** — recurring support, listed in the repo
-- ☕ **[Buy me a coffee](https://buymeacoffee.com/jorgegonzalez)** — one-off thanks
+- ☕ **[Buy me a coffee](https://buymeacoffee.com/rafigonzalez)** — one-off thanks
 
 The same links live in the app's footer.
 

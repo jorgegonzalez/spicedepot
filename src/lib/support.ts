@@ -6,4 +6,4 @@ export const GITHUB_SPONSORS_URL =
   "https://github.com/sponsors/jorgegonzalez";
 
 export const BUY_ME_A_COFFEE_URL =
-  "https://buymeacoffee.com/jorgegonzalez";
+  "https://buymeacoffee.com/rafigonzalez";
