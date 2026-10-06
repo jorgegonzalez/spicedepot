@@ -45,5 +45,5 @@ The apex (`spicedepot.app`) and `www` domains are attached to the Vercel project
 
 - **Copy** — all text lives in [index.html](./index.html). It's one file by design.
 - **Styles** — Tailwind via [`src/style.css`](./src/style.css); custom utilities defined in `@layer components`.
-- **Icon** — same `assets/icon.png` the desktop app uses, copied into this dir at scaffold time.
+- **Icon** — `icon.png` is copied from `src/assets/spicedepot-icon.png`, the desktop header's tightly cropped cargo ship artwork.
 - **Sponsor / support links** — match what's in the desktop app's [`src/lib/support.ts`](../src/lib/support.ts) and [`.github/FUNDING.yml`](../.github/FUNDING.yml). When you update one, update all three.
