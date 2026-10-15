@@ -18,36 +18,41 @@ export function WatchPage() {
   const [starting, setStarting] = useState(false);
   const counter = useRef(0);
 
-  // Stop any active watch when the page unmounts or the active connection changes.
+  const liveId = useRef<string | null>(null);
+  const generation = useRef(0);
   useEffect(() => {
+    setWatchId(null);
+    setStarting(false);
+    setLog([]);
+    setStartError(null);
     return () => {
-      if (watchId) {
-        api.watchStop(watchId).catch(() => {
-          // Best-effort: server task may have already exited.
-        });
-      }
+      generation.current++;
+      const id = liveId.current;
+      liveId.current = null;
+      if (id) void api.watchStop(id).catch(() => {});
     };
-    // We deliberately stop only on unmount / id transition.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // When the active connection changes, stop the current watch and clear the log.
-  useEffect(() => {
-    if (watchId) {
-      api.watchStop(watchId).catch(() => {});
-      setWatchId(null);
-      setLog([]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeConnectionId]);
 
   const start = useCallback(async () => {
     if (!activeConnectionId) return;
+    const attempt = ++generation.current;
+    let ended = false;
     setStartError(null);
     setStarting(true);
 
     const channel = new Channel<WatchEvent>();
     channel.onmessage = (evt) => {
+      if (attempt !== generation.current) return;
+      if (evt.kind === "started") {
+        setStarting(false);
+        return;
+      }
+      if (evt.kind === "ended" || evt.kind === "error") {
+        ended = true;
+        liveId.current = null;
+        setWatchId(null);
+        setStarting(false);
+      }
       setLog((prev) => {
         const next: LogRow[] = [
           { ...evt, receivedAt: Date.now(), id: ++counter.current },
@@ -68,18 +73,29 @@ export function WatchPage() {
         { object_types },
         channel,
       );
+      if (attempt !== generation.current || ended) {
+        void api.watchStop(id).catch(() => {});
+        return;
+      }
+      liveId.current = id;
       setWatchId(id);
     } catch (e) {
-      setStartError((e as Error).message);
-    } finally {
-      setStarting(false);
+      if (attempt === generation.current) {
+        setStartError((e as Error).message);
+        setStarting(false);
+      }
     }
   }, [activeConnectionId, objectTypesText]);
 
   const stop = useCallback(async () => {
-    if (!watchId) return;
+    generation.current++;
+    const id = liveId.current;
+    liveId.current = null;
+    setStarting(false);
+    setWatchId(null);
+    if (!id) return;
     try {
-      await api.watchStop(watchId);
+      await api.watchStop(id);
     } catch {
       // Server task may have already exited; harmless.
     } finally {
@@ -95,26 +111,27 @@ export function WatchPage() {
     );
   }
 
-  const isRunning = !!watchId;
+  const isRunning = !!watchId && !starting;
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex flex-wrap items-end gap-3 border-b border-slate-200 dark:border-slate-800 p-4">
         <div className="min-w-[280px] flex-1">
-          <label className="mb-1 block text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">
+          <label htmlFor="watch-object-types" className="mb-1 block text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">
             Object types (comma-separated, blank = all)
           </label>
           <Input
+            id="watch-object-types"
             value={objectTypesText}
             onChange={(e) => setObjectTypesText(e.target.value)}
             placeholder="document, group"
-            disabled={isRunning}
+            disabled={isRunning || starting}
           />
         </div>
         <div className="flex gap-2">
-          {isRunning ? (
+          {isRunning || starting ? (
             <Button variant="danger" onClick={stop}>
-              ● Stop
+              {starting ? "Cancel starting…" : "● Stop"}
             </Button>
           ) : (
             <Button onClick={start} disabled={starting}>
@@ -166,7 +183,7 @@ function StatusBar({
     <div className="flex items-center gap-3 border-b border-slate-200 dark:border-slate-800 px-4 py-2 text-xs">
       <div
         className={`flex items-center gap-1.5 ${
-          isRunning ? "text-emerald-300" : "text-slate-500"
+          isRunning ? "text-emerald-700 dark:text-emerald-300" : "text-slate-500"
         }`}
       >
         <span
@@ -187,14 +204,15 @@ function StatusBar({
 function LogLine({ row }: { row: LogRow }) {
   const time = new Date(row.receivedAt).toLocaleTimeString();
   switch (row.kind) {
+    case "started": return null;
     case "update": {
       const op = row.operation;
       const tone =
         op === "create"
-          ? "text-emerald-300"
+          ? "text-emerald-700 dark:text-emerald-300"
           : op === "touch"
-          ? "text-sky-300"
-          : "text-red-300";
+          ? "text-sky-700 dark:text-sky-300"
+          : "text-red-700 dark:text-red-300";
       const r = row.relationship;
       const subject = `${r.subject_type}:${r.subject_id}${
         r.subject_relation ? `#${r.subject_relation}` : ""
@@ -211,7 +229,7 @@ function LogLine({ row }: { row: LogRow }) {
     }
     case "schema_changed":
       return (
-        <div className="flex gap-3 border-b border-slate-200 dark:border-slate-900 px-4 py-1.5 text-amber-300">
+        <div className="flex gap-3 border-b border-slate-200 dark:border-slate-900 px-4 py-1.5 text-amber-700 dark:text-amber-300">
           <span className="text-slate-500">{time}</span>
           <span className="w-12 uppercase">schema</span>
           <span>schema updated{row.at && ` (at ${row.at})`}</span>
@@ -227,7 +245,7 @@ function LogLine({ row }: { row: LogRow }) {
       );
     case "error":
       return (
-        <div className="flex gap-3 border-b border-slate-200 dark:border-slate-900 px-4 py-1.5 text-red-300">
+        <div className="flex gap-3 border-b border-slate-200 dark:border-slate-900 px-4 py-1.5 text-red-700 dark:text-red-300">
           <span className="text-slate-500">{time}</span>
           <span className="w-12 uppercase">error</span>
           <span>{row.message}</span>

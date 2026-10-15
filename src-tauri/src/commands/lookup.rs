@@ -126,6 +126,7 @@ pub struct LookupSubjectItem {
 pub struct LookupSubjectsOutput {
     pub items: Vec<LookupSubjectItem>,
     pub looked_up_at: Option<String>,
+    pub truncated: bool,
 }
 
 #[tauri::command]
@@ -146,12 +147,13 @@ pub async fn lookup_subjects(
             subject_object_type: input.subject_type,
             optional_subject_relation: input.subject_relation.unwrap_or_default(),
             context: None,
-            optional_concrete_limit: input.limit.unwrap_or(0),
+            optional_concrete_limit: 0, // Unsupported by some SpiceDB versions; cap the stream below.
             optional_cursor: None,
             wildcard_option: 0, // WILDCARD_OPTION_UNSPECIFIED — server default
         };
 
-        let responses = client.lookup_subjects(req).await?;
+        let limit = input.limit.filter(|n| *n > 0).unwrap_or(1000).min(1000) as usize;
+        let (responses, truncated) = client.lookup_subjects_capped(req, limit).await?;
         let looked_up_at = responses
             .first()
             .and_then(|r| r.looked_up_at.as_ref().map(|t| t.token.clone()));
@@ -179,6 +181,7 @@ pub async fn lookup_subjects(
         Ok(LookupSubjectsOutput {
             items,
             looked_up_at,
+            truncated,
         })
     }
     .await)

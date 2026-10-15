@@ -1,209 +1,118 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EditorState, Compartment } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { bracketMatching, indentOnInput } from "@codemirror/language";
+import { bracketMatching, indentOnInput, defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { api } from "@/lib/api";
-import { useActiveConnection } from "@/lib/store";
+import { useActiveConnection, useSchemaDrafts, useTheme } from "@/lib/store";
 import { spiceDbSchemaLanguage } from "@/lib/spicedbLang";
-import { Banner, Button } from "@/components/ui";
+import { Banner, Button, Dialog } from "@/components/ui";
 
 export function SchemaPage() {
   const { activeConnectionId } = useActiveConnection();
-  const qc = useQueryClient();
-  const editorParent = useRef<HTMLDivElement | null>(null);
-  const editorView = useRef<EditorView | null>(null);
-  const editableComp = useRef(new Compartment());
-  // Refs (not state) so the mutation captures the *latest* values without
-  // having to thread them through render → useEffect deps.
-  const draftRef = useRef<string>("");
-  const dirtyRef = useRef<boolean>(false);
-  // Text we last sent to write_schema; used to disambiguate a refetch echoing
-  // our own write from server-side changes the editor should adopt.
-  const lastSubmittedRef = useRef<string | null>(null);
-  const [dirty, _setDirty] = useState(false);
-  const setDirty = useCallback((v: boolean) => {
-    dirtyRef.current = v;
-    _setDirty(v);
-  }, []);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [savedAt, setSavedAt] = useState<string | null>(null);
-
-  const schemaQuery = useQuery({
-    queryKey: ["schema", activeConnectionId],
-    queryFn: () => api.readSchema(activeConnectionId!),
-    enabled: !!activeConnectionId,
-  });
-
-  const writeMut = useMutation({
-    mutationFn: () => {
-      const text = draftRef.current;
-      lastSubmittedRef.current = text;
-      return api.writeSchema(activeConnectionId!, text);
-    },
-    onMutate: () => setSaveError(null),
-    onSuccess: () => {
-      setSavedAt(new Date().toISOString());
-      // Don't clear `dirty` blindly — the user may have typed more during the
-      // write. Only clear if no further edits have happened since submit.
-      if (draftRef.current === lastSubmittedRef.current) {
-        setDirty(false);
-      }
-      qc.invalidateQueries({ queryKey: ["schema", activeConnectionId] });
-    },
-    onError: (err: Error) => setSaveError(err.message),
-  });
-
-  // Reset all editor state whenever we switch connections. The sync effect
-  // below will then pick up the new connection's schema_text from the query.
-  // Without this, the previous connection's dirty buffer leaks into the next.
-  useEffect(() => {
-    draftRef.current = "";
-    dirtyRef.current = false;
-    lastSubmittedRef.current = null;
-    _setDirty(false);
-    setSaveError(null);
-    setSavedAt(null);
-    if (editorView.current) {
-      const view = editorView.current;
-      view.dispatch({
-        changes: { from: 0, to: view.state.doc.length, insert: "" },
-      });
-    }
-  }, [activeConnectionId]);
-
-  // Mount the editor once. We push fresh content via dispatch.
-  useEffect(() => {
-    if (!editorParent.current || editorView.current) return;
-    const state = EditorState.create({
-      doc: "",
-      extensions: [
-        lineNumbers(),
-        history(),
-        bracketMatching(),
-        indentOnInput(),
-        keymap.of([...defaultKeymap, ...historyKeymap]),
-        oneDark,
-        spiceDbSchemaLanguage(),
-        EditorView.theme({
-          "&": { backgroundColor: "transparent" },
-          ".cm-gutters": { backgroundColor: "transparent" },
-        }),
-        editableComp.current.of(EditorView.editable.of(true)),
-        EditorView.updateListener.of((u) => {
-          if (u.docChanged) {
-            draftRef.current = u.state.doc.toString();
-            setDirty(true);
-          }
-        }),
-      ],
-    });
-    editorView.current = new EditorView({
-      state,
-      parent: editorParent.current,
-    });
-    return () => {
-      editorView.current?.destroy();
-      editorView.current = null;
-    };
-  }, []);
-
-  // Push remote schema into the editor whenever the query result changes.
-  // Three cases to handle correctly:
-  //   1. First load / connection switch: editor is empty, adopt server text.
-  //   2. Refetch echoing our own write: server returned exactly what we sent
-  //      AND the user hasn't typed since — clear lastSubmittedRef and stop.
-  //   3. Server-side change (or an echo where the user has since typed):
-  //      only adopt if the editor has no unsaved local edits, otherwise
-  //      keep the user's draft and let them resolve manually via Refresh.
-  useEffect(() => {
-    if (!editorView.current) return;
-    const text = schemaQuery.data?.schema_text ?? "";
-    const view = editorView.current;
-    const current = view.state.doc.toString();
-    if (text === current) {
-      if (lastSubmittedRef.current === text) lastSubmittedRef.current = null;
-      return;
-    }
-    if (lastSubmittedRef.current === text && draftRef.current === text) {
-      // Server confirmed our write and no further edits — sync metadata only.
-      lastSubmittedRef.current = null;
-      setDirty(false);
-      setSavedAt(schemaQuery.data?.read_at ?? null);
-      return;
-    }
-    if (dirtyRef.current) {
-      // Don't clobber unsaved local edits with a server refetch.
-      return;
-    }
-    view.dispatch({
-      changes: { from: 0, to: view.state.doc.length, insert: text },
-    });
-    draftRef.current = text;
-    setDirty(false);
-    setSavedAt(schemaQuery.data?.read_at ?? null);
-    // dirty/draft are read via refs above — no need in deps.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schemaQuery.data?.schema_text, schemaQuery.data?.read_at]);
-
-  if (!activeConnectionId) {
-    return (
-      <div className="p-6 text-sm text-slate-600 dark:text-slate-400">
-        Select a connection from the header (or create one in Connections) to
-        view its schema.
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4 py-3">
-        <div>
-          <h1 className="text-sm font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
-            Schema
-          </h1>
-          <p className="text-xs text-slate-500">
-            {schemaQuery.isFetching
-              ? "Reading…"
-              : savedAt
-              ? `Last read ${new Date(savedAt).toLocaleString()}`
-              : "—"}
-            {dirty && " · unsaved changes"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => schemaQuery.refetch()}
-            disabled={schemaQuery.isFetching}
-          >
-            Refresh
-          </Button>
-          <Button
-            onClick={() => writeMut.mutate()}
-            disabled={!dirty || writeMut.isPending}
-          >
-            {writeMut.isPending ? "Writing…" : "Write schema"}
-          </Button>
-        </div>
-      </div>
-
-      {schemaQuery.error && (
-        <div className="border-b border-slate-200 dark:border-slate-800 p-3">
-          <Banner tone="error">
-            Failed to read schema: {(schemaQuery.error as Error).message}
-          </Banner>
-        </div>
-      )}
-      {saveError && (
-        <div className="border-b border-slate-200 dark:border-slate-800 p-3">
-          <Banner tone="error">Write failed: {saveError}</Banner>
-        </div>
-      )}
-
-      <div ref={editorParent} className="min-h-0 flex-1 overflow-hidden" />
-    </div>
+  return activeConnectionId ? <SchemaEditor key={activeConnectionId} connectionId={activeConnectionId} /> : (
+    <div className="p-6 text-sm text-slate-600 dark:text-slate-400">Select a connection from the header (or create one in Connections) to view its schema.</div>
   );
+}
+
+function SchemaEditor({ connectionId }: { connectionId: string }) {
+  const qc = useQueryClient();
+  const { theme } = useTheme();
+  const parent = useRef<HTMLDivElement>(null);
+  const editor = useRef<EditorView | null>(null);
+  const themeCompartment = useRef(new Compartment());
+  const applyingRemote = useRef(false);
+  const draft = useSchemaDrafts((s) => s.drafts[connectionId]);
+  const dirty = draft !== undefined;
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const query = useQuery({ queryKey: ["schema", connectionId], queryFn: () => api.readSchema(connectionId) });
+  const baseline = useRef<string | undefined>(undefined);
+
+  const write = useMutation({
+    mutationFn: (text: string) => api.writeSchema(connectionId, text),
+    onSuccess: (_, submitted) => {
+      baseline.current = submitted;
+      const store = useSchemaDrafts.getState();
+      // A completed write must not clear edits made while it was in flight.
+      if (store.drafts[connectionId] === submitted) store.removeDraft(connectionId);
+      qc.invalidateQueries({ queryKey: ["schema", connectionId] });
+    },
+  });
+
+  useEffect(() => {
+    const view = new EditorView({
+      parent: parent.current!,
+      state: EditorState.create({
+        doc: useSchemaDrafts.getState().drafts[connectionId] ?? "",
+        extensions: [
+          lineNumbers(), history(), bracketMatching(), indentOnInput(),
+          keymap.of([...defaultKeymap, ...historyKeymap]),
+          themeCompartment.current.of([]), spiceDbSchemaLanguage(),
+          EditorView.contentAttributes.of({ "aria-label": "Schema editor" }),
+          EditorView.updateListener.of((update) => {
+            if (!update.docChanged || applyingRemote.current) return;
+            const text = update.state.doc.toString();
+            const store = useSchemaDrafts.getState();
+            if (text === baseline.current) store.removeDraft(connectionId);
+            else store.saveDraft(connectionId, text);
+          }),
+        ],
+      }),
+    });
+    editor.current = view;
+    return () => { view.destroy(); editor.current = null; };
+  }, [connectionId]);
+
+  useEffect(() => {
+    editor.current?.dispatch({ effects: themeCompartment.current.reconfigure(
+      theme === "dark" ? oneDark : [syntaxHighlighting(defaultHighlightStyle), EditorView.theme({
+        "&": { backgroundColor: "#fff", color: "#0f172a" },
+        ".cm-gutters": { backgroundColor: "#f1f5f9", color: "#64748b" },
+      })],
+    ) });
+  }, [theme]);
+
+  useEffect(() => {
+    if (!query.data || !editor.current) return;
+    baseline.current = query.data.schema_text;
+    if (useSchemaDrafts.getState().drafts[connectionId] !== undefined) return;
+    applyingRemote.current = true;
+    editor.current.dispatch({ changes: { from: 0, to: editor.current.state.doc.length, insert: query.data.schema_text } });
+    applyingRemote.current = false;
+  }, [query.data, connectionId]);
+
+  const discard = () => {
+    const view = editor.current;
+    if (!view || !query.data) return;
+    applyingRemote.current = true;
+    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: query.data.schema_text } });
+    applyingRemote.current = false;
+    useSchemaDrafts.getState().removeDraft(connectionId);
+    setConfirmDiscard(false);
+    write.reset();
+  };
+
+  return <div className="flex h-full min-h-0 flex-col">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+      <div><h1>Schema</h1><p className="text-xs text-slate-500">
+        {query.isFetching ? "Reading…" : query.data ? `Last read ${new Date(query.dataUpdatedAt).toLocaleTimeString()}` : "Not loaded"}
+        {dirty && " · draft saved on this Mac"}
+      </p></div>
+      <div className="flex flex-wrap gap-2">
+        {dirty && <Button variant="ghost" disabled={!query.data || write.isPending} onClick={() => setConfirmDiscard(true)}>Discard draft</Button>}
+        <Button variant="secondary" disabled={query.isFetching} onClick={() => query.refetch()}>Refresh</Button>
+        <Button disabled={!dirty || write.isPending || !query.data || query.isError} onClick={() => write.mutate(editor.current!.state.doc.toString())}>{write.isPending ? "Writing…" : "Write schema"}</Button>
+      </div>
+    </div>
+    {query.error && <div className="p-3"><Banner tone="error">Failed to read schema: {query.error.message}</Banner></div>}
+    {write.error && <div className="p-3"><Banner tone="error">Write failed: {write.error.message}</Banner></div>}
+    {dirty && <div className="px-4 py-2 text-xs text-slate-600 dark:text-slate-400">Your draft survives navigation and restart. Refresh keeps your edits; Discard draft restores the last read version.</div>}
+    <div ref={parent} className="min-h-0 flex-1 overflow-hidden" />
+    {confirmDiscard && <Dialog title="Discard schema draft?" onClose={() => setConfirmDiscard(false)}>
+      <p className="my-4 text-sm">Replace your local edits with the last schema read from this connection?</p>
+      <div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setConfirmDiscard(false)}>Keep draft</Button><Button variant="danger" onClick={discard}>Discard draft</Button></div>
+    </Dialog>}
+  </div>;
 }

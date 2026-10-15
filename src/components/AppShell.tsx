@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import appIcon from "@/assets/spicedepot-icon.png";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -16,6 +17,7 @@ const navItems = [
   { to: "/permissions", label: "Check" },
   { to: "/lookup", label: "Lookup" },
   { to: "/watch", label: "Watch" },
+  { to: "/mcp", label: "MCP" },
 ];
 
 export function AppShell() {
@@ -44,20 +46,23 @@ export function AppShell() {
     connections?.find((c) => c.id === activeConnectionId) ?? null;
 
   return (
-    <div className="flex h-full flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-      <header className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4 py-2">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-orange-500" />
-            <span className="font-semibold tracking-tight">SpiceDepot</span>
+    <div className="ginyu-app flex h-full flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+      <header className="app-header flex items-center justify-between gap-4 px-4 py-3">
+        <div className="app-primary flex min-w-0 items-center gap-5">
+          <div className="app-brand flex shrink-0 items-center gap-2">
+            <img src={appIcon} alt="" className="h-10 w-10 shrink-0 object-contain" />
+            <div>
+              <span className="brand-display block text-[13px] font-bold leading-none">SpiceDepot</span>
+              <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.18em] text-orange-400">Permission systems</span>
+            </div>
           </div>
-          <nav className="flex gap-1">
+          <nav className="app-nav flex gap-0.5">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `rounded px-3 py-1.5 text-sm transition ${
+                  `app-nav-link px-3 py-1.5 text-sm transition ${
                     isActive
                       ? "bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                       : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-800 dark:hover:text-slate-200"
@@ -69,10 +74,11 @@ export function AppShell() {
             ))}
           </nav>
         </div>
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-slate-500">Active:</label>
+        <div className="app-connection flex min-w-0 items-center gap-2">
+          <label htmlFor="active-connection" className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Active</label>
           <select
-            className="rounded border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 px-2 py-1 text-sm"
+            id="active-connection"
+            className="connection-control max-w-[220px] border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm outline-none focus:border-orange-500"
             value={activeConnectionId ?? ""}
             onChange={(e) => {
               const id = e.target.value || null;
@@ -88,12 +94,12 @@ export function AppShell() {
             ))}
           </select>
           {active && (
-            <span className="text-xs text-slate-500">{active.endpoint}</span>
+            <span className="app-endpoint text-xs text-slate-500">{active.endpoint}</span>
           )}
           <ThemeToggle />
         </div>
       </header>
-      <main className="min-h-0 flex-1 overflow-hidden">
+      <main className="ginyu-main min-h-0 flex-1 overflow-hidden">
         <Outlet />
       </main>
       <SupportFooter />
@@ -109,7 +115,7 @@ function ThemeToggle() {
       onClick={toggleTheme}
       title={isDark ? "Switch to light theme" : "Switch to dark theme"}
       aria-label="Toggle theme"
-      className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 transition hover:bg-slate-200 dark:hover:bg-slate-800"
+      className="theme-control ml-1 inline-flex h-9 w-9 items-center justify-center border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 transition hover:border-orange-500/60 hover:text-orange-400"
     >
       {isDark ? (
         // sun
@@ -133,7 +139,7 @@ function SupportFooter() {
     });
   };
   return (
-    <footer className="flex items-center justify-between gap-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 py-1.5 text-xs text-slate-500">
+    <footer className="app-footer flex items-center justify-between gap-4 px-2 py-2 text-[11px] text-slate-500">
       <div>
         <span>SpiceDepot · open source (Apache 2.0)</span>
       </div>

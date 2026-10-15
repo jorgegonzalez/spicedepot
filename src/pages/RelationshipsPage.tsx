@@ -323,6 +323,8 @@ export function RelationshipsPage() {
           <Button type="submit" disabled={readMut.isPending}>
             {readMut.isPending ? "Reading…" : "Read"}
           </Button>
+          <details className="text-xs">
+            <summary className="cursor-pointer py-2 text-slate-600 dark:text-slate-400">More actions</summary>
           <Button
             type="button"
             variant="danger"
@@ -332,6 +334,7 @@ export function RelationshipsPage() {
           >
             {bulkDeleteMut.isPending ? "Deleting…" : "Delete all matching"}
           </Button>
+          </details>
         </div>
       </form>
 
@@ -520,12 +523,14 @@ function ObjectFields({
       <div className="grid grid-cols-2 gap-2">
         <Input
           required={required}
+          aria-label={`${label} type`}
           value={type}
           onChange={(e) => onTypeChange(e.target.value)}
           placeholder="type"
         />
         <Input
           required={required && !label.toLowerCase().includes("filter")}
+          aria-label={`${label} id`}
           value={id}
           onChange={(e) => onIdChange(e.target.value)}
           placeholder="id"
@@ -560,17 +565,20 @@ function SubjectFields({
       <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
         <Input
           required={required}
+          aria-label="Subject type"
           value={type}
           onChange={(e) => onTypeChange(e.target.value)}
           placeholder="type"
         />
         <Input
           required={required}
+          aria-label="Subject id"
           value={id}
           onChange={(e) => onIdChange(e.target.value)}
           placeholder="id"
         />
         <Input
+          aria-label="Subject relation"
           value={rel}
           onChange={(e) => onRelChange(e.target.value)}
           placeholder="#rel"

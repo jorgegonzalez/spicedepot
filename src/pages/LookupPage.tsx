@@ -33,6 +33,12 @@ const emptySubjects: LookupSubjectsInput = {
 
 export function LookupPage() {
   const { activeConnectionId } = useActiveConnection();
+  return activeConnectionId ? <LookupForm key={activeConnectionId} activeConnectionId={activeConnectionId} /> : (
+    <div className="p-6 text-sm text-slate-600 dark:text-slate-400">Select a connection from the header to run lookups.</div>
+  );
+}
+
+function LookupForm({ activeConnectionId }: { activeConnectionId: string }) {
   const [mode, setMode] = useState<Mode>("resources");
   const [resourcesInput, setResourcesInput] =
     useState<LookupResourcesInput>(emptyResources);
@@ -40,20 +46,20 @@ export function LookupPage() {
     useState<LookupSubjectsInput>(emptySubjects);
 
   const resourcesMut = useMutation({
-    mutationFn: () =>
+    mutationFn: (submitted: LookupResourcesInput) =>
       api.lookupResources(activeConnectionId!, {
-        ...resourcesInput,
-        subject_relation: resourcesInput.subject_relation || undefined,
-        limit: resourcesInput.limit || undefined,
+        ...submitted,
+        subject_relation: submitted.subject_relation || undefined,
+        limit: submitted.limit || undefined,
       }),
   });
 
   const subjectsMut = useMutation({
-    mutationFn: () =>
+    mutationFn: (submitted: LookupSubjectsInput) =>
       api.lookupSubjects(activeConnectionId!, {
-        ...subjectsInput,
-        subject_relation: subjectsInput.subject_relation || undefined,
-        limit: subjectsInput.limit || undefined,
+        ...submitted,
+        subject_relation: submitted.subject_relation || undefined,
+        limit: submitted.limit || undefined,
       }),
   });
 
@@ -67,8 +73,8 @@ export function LookupPage() {
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (mode === "resources") resourcesMut.mutate();
-    else subjectsMut.mutate();
+    if (mode === "resources") resourcesMut.mutate({ ...resourcesInput });
+    else subjectsMut.mutate({ ...subjectsInput });
   };
 
   const onClear = () => {
@@ -84,7 +90,7 @@ export function LookupPage() {
   const currentMut = mode === "resources" ? resourcesMut : subjectsMut;
 
   return (
-    <div className="grid h-full grid-cols-[420px_1fr] gap-0 overflow-hidden">
+    <div className="query-layout grid h-full grid-cols-[minmax(300px,420px)_minmax(0,1fr)] gap-0 overflow-hidden">
       <section className="flex min-h-0 flex-col overflow-hidden border-r border-slate-200 dark:border-slate-800">
         <div className="border-b border-slate-200 dark:border-slate-800 px-4 py-3">
           <h1 className="text-sm font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
@@ -148,6 +154,8 @@ export function LookupPage() {
       <section className="flex min-h-0 flex-col overflow-hidden">
         <ResultsHeader mode={mode} mut={currentMut} />
         <div className="min-h-0 flex-1 overflow-auto">
+          {currentMut.data && JSON.stringify(currentMut.variables) !== JSON.stringify(mode === "resources" ? resourcesInput : subjectsInput) && <div className="p-4"><Banner tone="info">Inputs changed. These are previous results; run Look up again.</Banner></div>}
+          {mode === "subjects" && subjectsMut.data?.truncated && <div className="p-4"><Banner tone="info">Showing the first {subjectsMut.data.items.length} subjects. More results exist; increase the limit or narrow your query.</Banner></div>}
           {currentMut.error && (
             <div className="p-4">
               <Banner tone="error">
@@ -354,7 +362,7 @@ function SubjectsForm({
       </Field>
       <Field
         label="Limit"
-        hint="Cap on results. Note: as of SpiceDB 1.40+, limit is not enforced for LookupSubjects."
+        hint="Maximum subjects to display. Applied locally; 0 uses the safety cap of 1000."
       >
         <Input
           type="number"

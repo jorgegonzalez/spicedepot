@@ -23,6 +23,9 @@ const RelationshipsPage = lazy(() =>
 const WatchPage = lazy(() =>
   import("./pages/WatchPage").then((m) => ({ default: m.WatchPage })),
 );
+const McpPage = lazy(() =>
+  import("./pages/McpPage").then((m) => ({ default: m.McpPage })),
+);
 
 function PageLoading() {
   return (
@@ -75,6 +78,14 @@ export default function App() {
           element={
             <Suspense fallback={<PageLoading />}>
               <WatchPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/mcp"
+          element={
+            <Suspense fallback={<PageLoading />}>
+              <McpPage />
             </Suspense>
           }
         />

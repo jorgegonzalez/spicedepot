@@ -23,7 +23,7 @@ const STORE_KEY: &str = "connections";
 const KEYRING_SERVICE: &str = "dev.spicelens.app";
 
 /// Public-facing connection record. Token never round-trips through this struct.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Connection {
     pub id: String,
     pub name: String,
@@ -31,15 +31,75 @@ pub struct Connection {
     pub insecure: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    #[serde(default)]
+    pub tunnel: Option<TunnelConfig>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "provider", rename_all = "snake_case")]
+pub enum TunnelConfig {
+    Railway {
+        project: String,
+        environment: String,
+        service: String,
+        remote_port: u16,
+        local_port: u16,
+    },
+}
+
+impl TunnelConfig {
+    pub fn local_endpoint(&self) -> String {
+        match self {
+            Self::Railway { local_port, .. } => format!("127.0.0.1:{local_port}"),
+        }
+    }
 }
 
 /// What the frontend sends on create/update.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct ConnectionInput {
     pub name: String,
     pub endpoint: String,
     pub insecure: bool,
     pub token: String,
+    #[serde(default)]
+    pub tunnel: Option<TunnelConfig>,
+}
+
+impl ConnectionInput {
+    fn normalized(mut self) -> AppResult<Self> {
+        self.name = self.name.trim().to_string();
+        self.endpoint = self.endpoint.trim().to_string();
+        if self.name.is_empty() {
+            return Err(AppError::Other("Connection name is required".into()));
+        }
+        match self.tunnel.as_mut() {
+            Some(TunnelConfig::Railway {
+                project,
+                environment,
+                service,
+                remote_port,
+                local_port,
+            }) => {
+                *project = project.trim().to_string();
+                *environment = environment.trim().to_string();
+                *service = service.trim().to_string();
+                if project.is_empty() || environment.is_empty() || service.is_empty() {
+                    return Err(AppError::Other(
+                        "Railway project, environment, and service are required".into(),
+                    ));
+                }
+                if *remote_port == 0 || *local_port == 0 {
+                    return Err(AppError::Other("Tunnel ports must be between 1 and 65535".into()));
+                }
+            }
+            None if self.endpoint.is_empty() => {
+                return Err(AppError::Other("Connection endpoint is required".into()));
+            }
+            None => {}
+        }
+        Ok(self)
+    }
 }
 
 pub struct ConnectionStore {
@@ -102,15 +162,22 @@ impl ConnectionStore {
     }
 
     pub async fn create(&self, input: ConnectionInput) -> AppResult<Connection> {
+        let input = input.normalized()?;
+        let endpoint = input
+            .tunnel
+            .as_ref()
+            .map(TunnelConfig::local_endpoint)
+            .unwrap_or(input.endpoint);
         let id = uuid::Uuid::new_v4().to_string();
         let now = Utc::now();
         let conn = Connection {
             id: id.clone(),
             name: input.name,
-            endpoint: input.endpoint,
-            insecure: input.insecure,
+            endpoint,
+            insecure: input.tunnel.is_some() || input.insecure,
             created_at: now,
             updated_at: now,
+            tunnel: input.tunnel,
         };
         let mut map = self.read_all()?;
         map.insert(id.clone(), conn.clone());
@@ -127,13 +194,19 @@ impl ConnectionStore {
         id: &str,
         input: ConnectionInput,
     ) -> AppResult<Connection> {
+        let input = input.normalized()?;
         let mut map = self.read_all()?;
         let existing = map
             .get_mut(id)
             .ok_or_else(|| AppError::NotFound(id.to_string()))?;
         existing.name = input.name;
-        existing.endpoint = input.endpoint;
-        existing.insecure = input.insecure;
+        existing.endpoint = input
+            .tunnel
+            .as_ref()
+            .map(TunnelConfig::local_endpoint)
+            .unwrap_or(input.endpoint);
+        existing.insecure = input.tunnel.is_some() || input.insecure;
+        existing.tunnel = input.tunnel;
         existing.updated_at = Utc::now();
         let updated = existing.clone();
         self.write_all(&map)?;
@@ -152,12 +225,11 @@ impl ConnectionStore {
         self.write_all(&map)?;
         // Best-effort token removal — log but don't fail the delete.
         let id_owned = id.to_string();
-        let _ = tokio::task::spawn_blocking(move || {
+        tokio::task::spawn_blocking(move || {
             if let Ok(entry) = keyring::Entry::new(KEYRING_SERVICE, &id_owned) {
                 let _ = entry.delete_credential();
             }
-        })
-        .await;
+        });
         Ok(())
     }
 

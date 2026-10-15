@@ -1,8 +1,11 @@
 pub mod connections;
 pub mod lookup;
+pub mod mcp;
+pub mod mcp_activity;
 pub mod permissions;
 pub mod relationships;
 pub mod schema;
+pub mod tunnels;
 pub mod watch;
 
 use crate::error::AppResult;
@@ -26,6 +29,7 @@ pub(crate) async fn client_for(
         let store = state.connections.lock().await;
         store.get(connection_id)?
     };
+    state.tunnels.lock().await.ensure_started(&conn).await?;
     let token = crate::connections::read_token(connection_id).await?;
 
     SpiceDbClient::connect(DialConfig {

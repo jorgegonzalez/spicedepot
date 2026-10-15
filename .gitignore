@@ -38,3 +38,13 @@ src-tauri/gen/
 vite.config.d.ts
 vite.config.js
 .vercel
+
+# Local audit evidence may contain private production metadata
+/docs/ux-audit-*/
+# Credentials and local runtime state
+.env.*
+!.env.example
+*.pem
+*.key
+connections.json
+mcp-activity.json

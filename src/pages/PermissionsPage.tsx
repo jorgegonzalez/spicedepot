@@ -15,34 +15,32 @@ const emptyInput: CheckPermissionInput = {
 
 export function PermissionsPage() {
   const { activeConnectionId } = useActiveConnection();
+  return activeConnectionId ? <PermissionForm key={activeConnectionId} connectionId={activeConnectionId} /> : (
+    <div className="p-6 text-sm text-slate-600 dark:text-slate-400">Select a connection from the header to run permission checks.</div>
+  );
+}
+
+function PermissionForm({ connectionId }: { connectionId: string }) {
   const [input, setInput] = useState<CheckPermissionInput>(emptyInput);
 
   const checkMut = useMutation({
-    mutationFn: () =>
-      api.checkPermission(activeConnectionId!, {
-        ...input,
-        subject_relation: input.subject_relation || undefined,
-      }),
+    mutationFn: async (submitted: CheckPermissionInput) => ({
+      result: await api.checkPermission(connectionId, { ...submitted, subject_relation: submitted.subject_relation || undefined }),
+      input: submitted,
+      completedAt: new Date().toLocaleTimeString(),
+    }),
   });
-
-  if (!activeConnectionId) {
-    return (
-      <div className="p-6 text-sm text-slate-600 dark:text-slate-400">
-        Select a connection from the header to run permission checks.
-      </div>
-    );
-  }
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    checkMut.mutate();
+    checkMut.mutate({ ...input });
   };
 
   const required = (k: keyof CheckPermissionInput) =>
     k !== "subject_relation";
 
   return (
-    <div className="grid h-full grid-cols-[420px_1fr] gap-0 overflow-hidden">
+    <div className="query-layout grid h-full grid-cols-[minmax(300px,420px)_minmax(0,1fr)] gap-0 overflow-hidden">
       <section className="flex min-h-0 flex-col overflow-hidden border-r border-slate-200 dark:border-slate-800">
         <div className="border-b border-slate-200 dark:border-slate-800 px-4 py-3">
           <h1 className="text-sm font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
@@ -166,7 +164,11 @@ export function PermissionsPage() {
               {(checkMut.error as Error).message}
             </Banner>
           )}
-          {checkMut.data && <ResultPanel data={checkMut.data} input={input} />}
+          {checkMut.data && <>
+            {JSON.stringify(checkMut.data.input) !== JSON.stringify(input) && <Banner tone="info">Inputs changed. This is the previous result; run Check again.</Banner>}
+            <p className="my-3 text-xs text-slate-500">Checked at {checkMut.data.completedAt}</p>
+            <ResultPanel data={checkMut.data.result} input={checkMut.data.input} />
+          </>}
           {!checkMut.data && !checkMut.error && (
             <div className="text-sm text-slate-500">
               Fill in the form and click Check. The result will appear here.
@@ -187,18 +189,18 @@ function ResultPanel({
 }) {
   const tone = {
     has_permission: {
-      bg: "bg-emerald-950/60 border-emerald-700",
-      text: "text-emerald-200",
+      bg: "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-700",
+      text: "text-emerald-800 dark:text-emerald-200",
       label: "Allowed",
     },
     no_permission: {
-      bg: "bg-red-950/40 border-red-800",
-      text: "text-red-200",
+      bg: "bg-red-50 dark:bg-red-950/40 border-red-800",
+      text: "text-red-800 dark:text-red-200",
       label: "Denied",
     },
     conditional_permission: {
-      bg: "bg-amber-950/40 border-amber-700",
-      text: "text-amber-200",
+      bg: "bg-amber-50 dark:bg-amber-950/40 border-amber-700",
+      text: "text-amber-800 dark:text-amber-200",
       label: "Conditional",
     },
     unspecified: {
@@ -244,10 +246,7 @@ function ResultPanel({
       )}
 
       {data.checked_at && (
-        <div className="text-xs text-slate-500">
-          <span className="uppercase tracking-wide">checked_at:</span>{" "}
-          <span className="font-mono">{data.checked_at}</span>
-        </div>
+        <details className="break-all text-xs text-slate-500"><summary>Consistency token</summary><span className="font-mono">{data.checked_at}</span></details>
       )}
     </div>
   );

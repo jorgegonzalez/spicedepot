@@ -44,6 +44,7 @@ A cross-platform desktop GUI for [SpiceDB](https://github.com/authzed/spicedb), 
 │   └── src/
 │       ├── main.rs         calls `spicedepot_lib::run()`
 │       ├── lib.rs          Tauri builder, plugins, command registration
+│       ├── mcp.rs          app-owned read-only MCP server + local stdio bridge
 │       ├── error.rs        AppError + AppResult — single error type for commands
 │       ├── connections.rs  ConnectionStore (store + keyring)
 │       ├── spicedb/
@@ -52,6 +53,7 @@ A cross-platform desktop GUI for [SpiceDB](https://github.com/authzed/spicedb), 
 │       │   └── client.rs   SpiceDbClient: builds Channel, attaches Bearer auth
 │       └── commands/
 │           ├── mod.rs       `client_for(state, id)` shared helper
+│           ├── mcp.rs       app executable path for setup snippets
 │           ├── connections.rs
 │           └── schema.rs
 ├── scripts/sync-proto.sh   re-vendor proto files from upstream (pinned)
@@ -113,6 +115,12 @@ Two stores, one logical record:
 
 - **JSON via `tauri-plugin-store`** (`connections.json` in the OS app data dir): `id`, `name`, `endpoint`, `insecure`, timestamps. Safe to back up.
 - **OS keychain via `keyring`** (service `dev.spicelens.app`, user = connection UUID): the bearer token. Never written to disk by us.
+
+The desktop app owns the local MCP server, the Tauri app-data connection store,
+and keyring reads. The agent-launched `mcp` subprocess only bridges stdio to a
+private local socket while the app is running. Keep stdout reserved for the
+MCP protocol; write diagnostics to stderr. MCP is read-only by design until an
+explicit write approval mechanism is implemented.
 
 `ConnectionInput.token == ""` on update means "leave token unchanged" — important UX detail.
 

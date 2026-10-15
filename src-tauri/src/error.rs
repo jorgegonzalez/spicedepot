@@ -21,7 +21,7 @@ pub enum AppError {
     #[error("invalid endpoint: {0}")]
     InvalidEndpoint(String),
 
-    #[error("transport: {0}")]
+    #[error("Cannot reach SpiceDB. Check the endpoint and TLS setting. For a private service, start its tunnel and confirm the service is running. ({0})")]
     Transport(#[from] tonic::transport::Error),
 
     #[error("grpc {code:?}: {message}")]
@@ -38,7 +38,11 @@ impl From<tonic::Status> for AppError {
     fn from(s: tonic::Status) -> Self {
         AppError::Grpc {
             code: s.code(),
-            message: s.message().to_string(),
+            message: if s.message() == "transport error" {
+                "The connection closed before SpiceDB responded. Check the tunnel, service health, and TLS setting.".into()
+            } else {
+                s.message().to_string()
+            },
         }
     }
 }

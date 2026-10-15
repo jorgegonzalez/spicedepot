@@ -8,6 +8,16 @@ export interface Connection {
   insecure: boolean;
   created_at: string;
   updated_at: string;
+  tunnel: RailwayTunnelConfig | null;
+}
+
+export interface RailwayTunnelConfig {
+  provider: "railway";
+  project: string;
+  environment: string;
+  service: string;
+  remote_port: number;
+  local_port: number;
 }
 
 export interface ConnectionInput {
@@ -16,6 +26,34 @@ export interface ConnectionInput {
   insecure: boolean;
   /** Bearer token. Stored in OS keychain, never returned by `list_connections`. */
   token: string;
+  tunnel: RailwayTunnelConfig | null;
+}
+
+export interface TunnelStatus {
+  connection_id: string;
+  state: "connecting" | "connected" | "reconnecting" | "stopped";
+  local_endpoint: string;
+  message: string | null;
+  changed_at: string;
+}
+
+export interface McpConnectResult {
+  client: string;
+  message: string;
+}
+
+export interface McpActivityEntry {
+  id: string;
+  requested_at: string;
+  tool: string;
+  connection_id: string | null;
+  connection_name: string | null;
+  endpoint: string | null;
+  arguments: Record<string, unknown>;
+  status: "success" | "error";
+  duration_ms: number;
+  summary: string | null;
+  error: string | null;
 }
 
 export interface SchemaResult {
@@ -83,6 +121,7 @@ export interface LookupSubjectItem {
 export interface LookupSubjectsOutput {
   items: LookupSubjectItem[];
   looked_up_at: string | null;
+  truncated: boolean;
 }
 
 export interface RelationshipFilterInput {
@@ -132,6 +171,7 @@ export interface BulkWriteOutput {
 }
 
 export type WatchEvent =
+  | { kind: "started" }
   | {
       kind: "update";
       operation: WriteOperation;
@@ -147,6 +187,15 @@ export interface WatchStartInput {
 }
 
 export const api = {
+  connectMcpClient: (client: "claude" | "codex") =>
+    invoke<McpConnectResult>("connect_mcp_client", { client }),
+  listMcpActivity: () => invoke<McpActivityEntry[]>("list_mcp_activity"),
+  clearMcpActivity: () => invoke<void>("clear_mcp_activity"),
+  listTunnelStatuses: () => invoke<TunnelStatus[]>("list_tunnel_statuses"),
+  startTunnel: (connectionId: string) =>
+    invoke<void>("start_tunnel", { connectionId }),
+  stopTunnel: (connectionId: string) =>
+    invoke<void>("stop_tunnel", { connectionId }),
   // Connections
   listConnections: () => invoke<Connection[]>("list_connections"),
   getConnection: (id: string) =>
@@ -159,6 +208,8 @@ export const api = {
     invoke<void>("delete_connection", { id }),
   testConnection: (id: string) =>
     invoke<string>("test_connection", { id }),
+  testConnectionInput: (input: ConnectionInput, id: string | null) =>
+    invoke<string>("test_connection_input", { input, id }),
 
   // Schema
   readSchema: (connectionId: string) =>

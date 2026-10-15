@@ -18,6 +18,22 @@ export const useActiveConnection = create<ActiveConnectionState>()(
 
 export type Theme = "dark" | "light";
 
+interface SchemaDraftState {
+  drafts: Record<string, string>;
+  saveDraft: (id: string, text: string) => void;
+  removeDraft: (id: string) => void;
+}
+
+export const useSchemaDrafts = create<SchemaDraftState>()(persist((set) => ({
+  drafts: {},
+  saveDraft: (id, text) => set((state) => ({ drafts: { ...state.drafts, [id]: text } })),
+  removeDraft: (id) => set((state) => {
+    const drafts = { ...state.drafts };
+    delete drafts[id];
+    return { drafts };
+  }),
+}), { name: "spicedepot.schema-drafts" }));
+
 interface ThemeState {
   theme: Theme;
   setTheme: (theme: Theme) => void;

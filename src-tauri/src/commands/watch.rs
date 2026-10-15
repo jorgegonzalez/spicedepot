@@ -10,12 +10,11 @@
 //!
 //! The map entry stays until either `watch_stop` removes it or the task
 //! finishes on its own (terminal error / clean end-of-stream). We don't
-//! garbage-collect completed entries — at the scale this UI runs (1-2 active
-//! watches per session), it's not worth the bookkeeping.
+//! retain completed entries: terminal paths remove their handles.
 
 use super::client_for;
 use super::relationships::{RelationshipRow, WriteOperation};
-use crate::error::{AppError, AppResult};
+use crate::error::AppResult;
 use crate::spicedb::proto::{Relationship, RelationshipOperation, WatchRequest};
 use crate::AppState;
 use serde::{Deserialize, Serialize};
@@ -33,6 +32,7 @@ pub struct WatchStartInput {
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum WatchEvent {
+    Started,
     /// One relationship change.
     Update {
         operation: WriteOperation,
@@ -58,21 +58,30 @@ pub async fn watch_start(
     on_event: Channel<WatchEvent>,
 ) -> AppResult<String> {
     let client = client_for(&state, &connection_id).await?;
-    let stream = client
-        .watch_stream(WatchRequest {
-            optional_object_types: input.object_types,
-            optional_start_cursor: None,
-            optional_relationship_filters: Vec::new(),
-            optional_update_kinds: Vec::new(),
-        })
-        .await?;
 
     let watch_id = uuid::Uuid::new_v4().to_string();
     let watch_id_for_task = watch_id.clone();
     let watches = state.watches.clone();
 
+    let mut map = state.watches.lock().await;
     let handle = tokio::spawn(async move {
-        let mut stream = stream;
+        let mut stream = match client.watch_stream(WatchRequest {
+            optional_object_types: input.object_types,
+            optional_start_cursor: None,
+            optional_relationship_filters: Vec::new(),
+            optional_update_kinds: Vec::new(),
+        }).await {
+            Ok(stream) => stream,
+            Err(error) => {
+                let _ = on_event.send(WatchEvent::Error { message: error.to_string() });
+                watches.lock().await.remove(&watch_id_for_task);
+                return;
+            }
+        };
+        if on_event.send(WatchEvent::Started).is_err() {
+            watches.lock().await.remove(&watch_id_for_task);
+            return;
+        }
         loop {
             match stream.next().await {
                 Some(Ok(resp)) => {
@@ -115,11 +124,7 @@ pub async fn watch_start(
         map.remove(&watch_id_for_task);
     });
 
-    state
-        .watches
-        .lock()
-        .await
-        .insert(watch_id.clone(), handle.abort_handle());
+    map.insert(watch_id.clone(), handle.abort_handle());
     Ok(watch_id)
 }
 
@@ -129,13 +134,10 @@ pub async fn watch_stop(
     watch_id: String,
 ) -> AppResult<()> {
     let handle = state.watches.lock().await.remove(&watch_id);
-    match handle {
-        Some(h) => {
-            h.abort();
-            Ok(())
-        }
-        None => Err(AppError::NotFound(watch_id)),
+    if let Some(handle) = handle {
+        handle.abort();
     }
+    Ok(())
 }
 
 fn flatten(r: Relationship) -> RelationshipRow {

@@ -24,7 +24,7 @@ use tonic::transport::{Channel, ClientTlsConfig, Endpoint};
 use tonic::{Request, Status};
 
 /// Settings needed to dial a SpiceDB server.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct DialConfig {
     pub endpoint: String,
     pub insecure: bool,
@@ -43,7 +43,6 @@ impl SpiceDbClient {
 
         let mut endpoint = Endpoint::from(uri.clone())
             .connect_timeout(std::time::Duration::from_secs(8))
-            .timeout(std::time::Duration::from_secs(30))
             // gRPC keepalive — helpful through NAT/load balancers.
             .keep_alive_while_idle(true)
             .tcp_keepalive(Some(std::time::Duration::from_secs(60)));
@@ -66,6 +65,7 @@ impl SpiceDbClient {
 
     fn auth<T>(&self, req: T) -> Request<T> {
         let mut r = Request::new(req);
+        r.set_timeout(std::time::Duration::from_secs(30));
         r.metadata_mut()
             .insert("authorization", self.bearer.clone());
         r
@@ -139,6 +139,27 @@ impl SpiceDbClient {
         Ok(out)
     }
 
+    /// Drain at most `limit + 1` results so callers can enforce a client-side
+    /// cap even on SpiceDB versions where LookupSubjects' concrete limit is
+    /// not implemented. The extra result is only used to report truncation.
+    pub async fn lookup_subjects_capped(
+        &self,
+        req: LookupSubjectsRequest,
+        limit: usize,
+    ) -> AppResult<(Vec<LookupSubjectsResponse>, bool)> {
+        let mut svc = self.permissions();
+        let mut stream = svc.lookup_subjects(self.auth(req)).await?.into_inner();
+        let mut out = Vec::new();
+        while let Some(msg) = stream.message().await? {
+            out.push(msg);
+            if out.len() > limit {
+                out.pop();
+                return Ok((out, true));
+            }
+        }
+        Ok((out, false))
+    }
+
     /// Server-streaming. Same Vec-drain pattern as the lookups — see their
     /// doc-comment for the rationale and the swap-to-Channel path.
     pub async fn read_relationships(
@@ -187,7 +208,9 @@ impl SpiceDbClient {
         req: WatchRequest,
     ) -> AppResult<tonic::Streaming<WatchResponse>> {
         let mut svc = self.watch();
-        let resp = svc.watch(self.auth(req)).await?;
+        let mut request = self.auth(req);
+        request.metadata_mut().remove("grpc-timeout");
+        let resp = svc.watch(request).await?;
         Ok(resp.into_inner())
     }
 

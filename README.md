@@ -36,11 +36,13 @@ See "Build from source" below.
 - **Lookup** — `LookupResources` ("which docs can alice view?") and `LookupSubjects` ("who can view doc1?") via a single page with a tab toggle. Results render as a sortable table.
 - **Relationship browser** — filtered `ReadRelationships` table with per-row delete + an inline form to add single relationships (CREATE or TOUCH).
 - **Watch viewer** — live `WatchService.Watch` stream rendered as a scrolling log of relationship changes (CREATE / TOUCH / DELETE) with optional object-type filter.
+- **Local MCP server** — connect Claude Code, Codex, and other stdio MCP clients to saved connections. Tokens stay in the OS keychain; MCP tools are read-only.
 - **Insecure (plaintext) gRPC** — works correctly out of the box, useful for local-dev SpiceDB.
 - TLS gRPC support via `rustls` (no native OpenSSL dependency).
 
 Roadmap (post-v1 polish):
 
+- Write tools for MCP with an explicit approval flow
 - Signed release binaries (Apple notarization, Windows code-signing)
 - Caveat context editor in the permission checker
 - "Load more" pagination for lookup / relationships once result sets get big
@@ -66,6 +68,30 @@ To produce a release bundle:
 ```bash
 pnpm tauri build
 ```
+
+## MCP for agent tools
+
+Open the **MCP** page in SpiceDepot and choose **Connect Claude Code** or
+**Connect Codex**. This adds a user-level MCP entry using the installed client
+CLI. Open SpiceDepot before starting or restarting the agent client so it can
+connect to the app.
+
+```bash
+"/path/to/SpiceDepot" mcp
+```
+
+The configured stdio process is a small bridge to a private local socket owned
+by the running SpiceDepot app. No network port is opened. The app reads saved
+connections and obtains tokens from the OS keychain when a tool call selects a
+connection. Opening SpiceDepot does not notify an already-running agent; MCP
+clients initiate their own connections. The available tools are
+`list_connections`, `read_schema`, `check_permission`,
+`lookup_resources`, `lookup_subjects`, and `read_relationships`. Database tools
+require an explicit saved connection name or ID. Lookup and relationship
+results are capped at 500 per call. No write tools are exposed yet.
+
+Agents connected to this server can read the schemas and authorization data
+permitted by each saved SpiceDB credential. No write tools are exposed.
 
 ## Updating the SpiceDB proto definitions
 
