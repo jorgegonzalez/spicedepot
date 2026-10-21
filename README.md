@@ -52,8 +52,8 @@ Roadmap (post-v1 polish):
 
 Requirements:
 
-- Rust (stable, 1.80+)
-- Node.js 20+
+- Rust (stable, 1.90+)
+- Node.js 22.12+
 - pnpm 9+
 - A C toolchain (Xcode CLT on macOS, MSVC on Windows, build-essential on Linux)
 - WebKitGTK 4.1 + libssl + libsoup3 on Linux

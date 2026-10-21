@@ -5,7 +5,7 @@ description = "Cross-platform SpiceDB GUI"
 authors = ["SpiceDepot contributors"]
 license = "Apache-2.0"
 edition = "2021"
-rust-version = "1.80"
+rust-version = "1.90"
 
 [lib]
 name = "spicedepot_lib"
@@ -56,3 +56,7 @@ widestring = "1.2"
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+
+# GTK3 requires glib 0.18; backport the upstream VariantStrIter safety fix.
+[patch.crates-io]
+glib = { path = "vendor/glib" }

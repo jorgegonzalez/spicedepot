@@ -126,6 +126,7 @@ impl SpiceDbClient {
         Ok(out)
     }
 
+    #[cfg(test)]
     pub async fn lookup_subjects(
         &self,
         req: LookupSubjectsRequest,

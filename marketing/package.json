@@ -3,16 +3,19 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Marketing site for SpiceDepot — static, deployable to any host.",
+  "description": "Marketing site for SpiceDepot \u2014 static, deployable to any host.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --port 4173"
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.13",
-    "vite": "^5.4.8"
+    "@tailwindcss/postcss": "^4.3.3",
+    "postcss": "^8.5.30",
+    "tailwindcss": "^4.3.3",
+    "vite": "^7.3.7"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

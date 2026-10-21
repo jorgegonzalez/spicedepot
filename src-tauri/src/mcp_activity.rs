@@ -56,7 +56,7 @@ impl McpActivityStore {
         let mut entries: Vec<McpActivityEntry> = serde_json::from_value(
             store.get(STORE_KEY).unwrap_or_else(|| serde_json::json!([])),
         )?;
-        entries.sort_by(|a, b| b.requested_at.cmp(&a.requested_at));
+        entries.sort_by_key(|entry| std::cmp::Reverse(entry.requested_at));
         Ok(entries)
     }
 
