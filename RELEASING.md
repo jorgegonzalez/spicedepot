@@ -45,7 +45,7 @@ When you're ready, follow Tauri's [signing guide](https://v2.tauri.app/distribut
 #   src-tauri/tauri.conf.json → `"version": "X.Y.Z"`
 # (frontend package.json is also bumped but doesn't gate the build)
 
-git commit -am "Bump to vX.Y.Z"
+git commit -am "chore(release): bump to vX.Y.Z"
 git tag vX.Y.Z
 git push origin main vX.Y.Z
 ```
