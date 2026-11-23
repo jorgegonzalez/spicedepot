@@ -1,7 +1,7 @@
 use super::client_for;
 use crate::error::AppResult;
 use crate::AppState;
-use chrono::Utc;
+use jiff::Timestamp;
 use serde::Serialize;
 use tauri::State;
 
@@ -21,7 +21,7 @@ pub async fn read_schema(
         match client.read_schema().await {
             Ok(resp) => Ok(SchemaResult {
                 schema_text: resp.schema_text,
-                read_at: Some(Utc::now().to_rfc3339()),
+                read_at: Some(Timestamp::now().to_string()),
             }),
             // No schema written yet — surface as empty string rather than an error.
             Err(crate::error::AppError::Grpc {
@@ -29,7 +29,7 @@ pub async fn read_schema(
                 ..
             }) => Ok(SchemaResult {
                 schema_text: String::new(),
-                read_at: Some(Utc::now().to_rfc3339()),
+                read_at: Some(Timestamp::now().to_string()),
             }),
             Err(e) => Err(e),
         }

@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 fn main() {
-    // Compile authzed gRPC protos via tonic-build. We only need the client side.
+    // Compile authzed gRPC protos via tonic-prost-build. We only need the client side.
     // Proto files are vendored under src-tauri/proto/ — see scripts/sync-proto.sh.
     let proto_root: PathBuf = Path::new("proto").to_path_buf();
 
@@ -31,7 +31,7 @@ fn main() {
         std::env::set_var("PROTOC", protoc);
     }
 
-    tonic_build::configure()
+    tonic_prost_build::configure()
         .build_server(false)
         .build_client(true)
         .compile_protos(&service_paths, &[proto_root])

@@ -51,7 +51,6 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::default().build())
-        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let store = connections::ConnectionStore::new(app.handle().clone())?;
             let connections = Arc::new(Mutex::new(store));
@@ -81,6 +80,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::open_support_url,
             commands::mcp::connect_mcp_client,
             commands::mcp_activity::list_mcp_activity,
             commands::mcp_activity::clear_mcp_activity,
