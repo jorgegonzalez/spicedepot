@@ -10,7 +10,7 @@
 //! Credential Manager, Secret Service) the platform provides.
 
 use crate::error::{AppError, AppResult};
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tauri::AppHandle;
@@ -29,8 +29,8 @@ pub struct Connection {
     pub name: String,
     pub endpoint: String,
     pub insecure: bool,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: Timestamp,
+    pub updated_at: Timestamp,
     #[serde(default)]
     pub tunnel: Option<TunnelConfig>,
 }
@@ -169,7 +169,7 @@ impl ConnectionStore {
             .map(TunnelConfig::local_endpoint)
             .unwrap_or(input.endpoint);
         let id = uuid::Uuid::new_v4().to_string();
-        let now = Utc::now();
+        let now = Timestamp::now();
         let conn = Connection {
             id: id.clone(),
             name: input.name,
@@ -207,7 +207,7 @@ impl ConnectionStore {
             .unwrap_or(input.endpoint);
         existing.insecure = input.tunnel.is_some() || input.insecure;
         existing.tunnel = input.tunnel;
-        existing.updated_at = Utc::now();
+        existing.updated_at = Timestamp::now();
         let updated = existing.clone();
         self.write_all(&map)?;
         // Empty token from the form means "leave unchanged".
@@ -264,4 +264,24 @@ async fn set_token_blocking(id: String, token: String) -> AppResult<()> {
     .await
     .map_err(|e| AppError::Other(format!("keychain task: {e}")))??;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Connection;
+    use serde_json::json;
+
+    #[test]
+    fn saved_connection_timestamps_round_trip_as_rfc3339() {
+        let saved = json!({
+            "id": "local", "name": "Local", "endpoint": "localhost:50051", "insecure": true,
+            "created_at": "2026-10-05T00:00:00Z",
+            "updated_at": "2026-10-05T01:00:00.123456789+01:00"
+        });
+        let conn: Connection = serde_json::from_value(saved).unwrap();
+        assert!(conn.created_at < conn.updated_at);
+        let json = serde_json::to_value(conn).unwrap();
+        assert_eq!(json["created_at"], "2026-10-05T00:00:00Z");
+        assert_eq!(json["updated_at"], "2026-10-05T00:00:00.123456789Z");
+    }
 }

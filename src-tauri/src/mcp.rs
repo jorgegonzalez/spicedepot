@@ -270,7 +270,7 @@ async fn handle(
         "tools/list" => Ok(json!({"tools": tool_definitions()})),
         "tools/call" => {
             let started = Instant::now();
-            let requested_at = chrono::Utc::now();
+            let requested_at = jiff::Timestamp::now();
             let outcome = call_tool(&params, store, tunnels).await;
             record_activity(
                 activity,
@@ -303,7 +303,7 @@ async fn record_activity(
     connections: &Arc<Mutex<ConnectionStore>>,
     params: &Value,
     outcome: &Result<Value, String>,
-    requested_at: chrono::DateTime<chrono::Utc>,
+    requested_at: jiff::Timestamp,
     duration_ms: u64,
 ) {
     let tool = params

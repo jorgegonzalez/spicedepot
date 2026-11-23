@@ -187,6 +187,7 @@ export interface WatchStartInput {
 }
 
 export const api = {
+  openSupportUrl: (url: string) => invoke<void>("open_support_url", { url }),
   connectMcpClient: (client: "claude" | "codex") =>
     invoke<McpConnectResult>("connect_mcp_client", { client }),
   listMcpActivity: () => invoke<McpActivityEntry[]>("list_mcp_activity"),

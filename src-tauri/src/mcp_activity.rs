@@ -1,6 +1,6 @@
 //! Persistent, bounded activity log for MCP tool calls.
 
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::AppHandle;
@@ -15,7 +15,7 @@ const MAX_ENTRIES: usize = 500;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct McpActivityEntry {
     pub id: String,
-    pub requested_at: DateTime<Utc>,
+    pub requested_at: Timestamp,
     pub tool: String,
     pub connection_id: Option<String>,
     pub connection_name: Option<String>,

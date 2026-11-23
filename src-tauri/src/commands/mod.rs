@@ -8,10 +8,23 @@ pub mod schema;
 pub mod tunnels;
 pub mod watch;
 
-use crate::error::AppResult;
+use crate::error::{AppError, AppResult};
 use crate::spicedb::{client::DialConfig, SpiceDbClient};
 use crate::AppState;
 use tauri::State;
+
+#[tauri::command]
+pub fn open_support_url(window: tauri::WebviewWindow, url: String) -> AppResult<()> {
+    if window.label() != "main"
+        || !matches!(
+            url.as_str(),
+            "https://github.com/sponsors/jorgegonzalez" | "https://buymeacoffee.com/rafigonzalez"
+        )
+    {
+        return Err(AppError::Other("Unsupported sponsor link".into()));
+    }
+    open::that_detached(url).map_err(|error| AppError::Other(error.to_string()))
+}
 
 /// Build a SpiceDB client for a known connection id, pulling the token out of
 /// the keychain. Centralized here so every command uses the same path.

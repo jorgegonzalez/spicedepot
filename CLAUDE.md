@@ -10,10 +10,10 @@ A cross-platform desktop GUI for [SpiceDB](https://github.com/authzed/spicedb), 
 
 | Layer    | Tools                                                                       |
 | -------- | --------------------------------------------------------------------------- |
-| Backend  | Rust, Tauri 2, tonic 0.12, prost 0.13, tokio                                |
+| Backend  | Rust, Tauri 2, tonic 0.14, prost 0.14, tokio                                |
 | Frontend | React 18, TypeScript, Vite, Tailwind v3, TanStack Query, Zustand, CodeMirror 6 |
 | Storage  | tauri-plugin-store (JSON, non-sensitive) + keyring (OS keychain, tokens)    |
-| Proto    | Vendored `.proto` files compiled by `tonic-build` with `protoc-bin-vendored` |
+| Proto    | Vendored `.proto` files compiled by `tonic-prost-build` with `protoc-bin-vendored` |
 
 ## Repo layout
 
@@ -36,7 +36,7 @@ A cross-platform desktop GUI for [SpiceDB](https://github.com/authzed/spicedb), 
 │   └── styles.css          Tailwind base + CodeMirror tweaks
 ├── src-tauri/              Rust backend
 │   ├── Cargo.toml
-│   ├── build.rs            runs tonic-build + tauri-build
+│   ├── build.rs            runs tonic-prost-build + tauri-build
 │   ├── tauri.conf.json     Tauri config
 │   ├── capabilities/       Tauri 2 capability ACLs
 │   ├── icons/              app icons
@@ -102,7 +102,7 @@ Tauri converts Rust `snake_case` parameters to `camelCase` for the JS side autom
 `SpiceDbClient::connect(DialConfig)` does the work of dialing. Key behaviors:
 
 - **Insecure (plaintext) mode** — when `insecure: true`, builds an `http://` URI and skips TLS config. This is the "known gap" mode that must keep working — `localhost:50051` against a dev SpiceDB should always succeed. Covered by `host_port_insecure_becomes_http` and `scheme_flag_mismatch_errors` unit tests.
-- **TLS mode** — when `insecure: false`, builds an `https://` URI and applies `ClientTlsConfig::new().with_native_roots()` (rustls + native CA store via the `tls-roots` feature on tonic).
+- **TLS mode** — when `insecure: false`, builds an `https://` URI and applies `ClientTlsConfig::new().with_native_roots()` (rustls + native CA store via the `tls-native-roots` feature on tonic).
 - **Endpoint normalization** — accepts `host:port`, `http(s)://host:port`, or `grpc(s)://host:port`. The scheme must match the `insecure` flag or `build_uri` returns an `InvalidEndpoint` error before we even try to dial.
 - **Auth** — every request gets `authorization: Bearer <token>` metadata. SpiceDB's pre-shared-key auth is just a bearer header.
 - **Schema empty case** — `read_schema` translates `gRPC NOT_FOUND` to "no schema written yet" (empty string), so the UI can render a blank editor without throwing.
@@ -136,7 +136,7 @@ We use the `linux-native-sync-persistent` keyring feature, which layers the kern
 
 ## Proto code generation
 
-Proto files live under `src-tauri/proto/` (vendored, committed). `build.rs` invokes `tonic-build` to emit Rust into `OUT_DIR`. Two non-obvious details:
+Proto files live under `src-tauri/proto/` (vendored, committed). `build.rs` invokes `tonic-prost-build` to emit Rust into `OUT_DIR`. Two non-obvious details:
 
 1. **Sibling package mounting** — generated paths inside nested message modules use `super::super::super::super::google::rpc::Status` to reach cross-package types. Because of how `tonic::include_proto!` flattens content, both `authzed` and `google` must be mounted as siblings inside `spicedb/proto.rs`. Don't relocate one without the other or builds break with `could not find google in super`.
 2. **Well-known types** — `google.protobuf.*` (Struct, Timestamp, Duration, Any) come from `prost_types` automatically. `google.rpc.Status` is **not** well-known; we compile it ourselves and mount it under `proto::google::rpc`.

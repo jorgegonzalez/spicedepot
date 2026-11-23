@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import appIcon from "@/assets/spicedepot-icon.png";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { api } from "@/lib/api";
 import { useActiveConnection, useTheme } from "@/lib/store";
 import {
@@ -130,11 +129,7 @@ function ThemeToggle() {
 
 function SupportFooter() {
   const open = (url: string) => () => {
-    // Tauri plugin-opener fires the system "open URL" handler, which lands
-    // in Safari / Chrome / Firefox depending on the user's default.
-    openUrl(url).catch(() => {
-      // Last-ditch fallback if the opener plugin isn't available for some
-      // reason — most browsers will at least navigate to the URL.
+    api.openSupportUrl(url).catch(() => {
       window.open(url, "_blank", "noopener,noreferrer");
     });
   };

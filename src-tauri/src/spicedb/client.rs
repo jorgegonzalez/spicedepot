@@ -48,8 +48,7 @@ impl SpiceDbClient {
             .tcp_keepalive(Some(std::time::Duration::from_secs(60)));
 
         if !cfg.insecure {
-            // Use rustls with native roots. tls-roots feature on tonic
-            // pulls in webpki-roots and rustls-native-certs.
+            // Trust certificates from the operating system's native CA store.
             let tls = ClientTlsConfig::new().with_native_roots();
             endpoint = endpoint.tls_config(tls)?;
         }
@@ -349,18 +348,21 @@ mod tests {
     ///
     ///   SPICEDB_TEST_ENDPOINT=localhost:50051 \
     ///   SPICEDB_TEST_TOKEN=spicedepot-test-key \
-    ///   cargo test -- --ignored insecure_roundtrip
+    ///   cargo test -- --ignored schema_roundtrip
+    ///
+    /// Use an https:// or grpcs:// endpoint to exercise native-root TLS.
     #[tokio::test]
     #[ignore]
-    async fn insecure_roundtrip() {
+    async fn schema_roundtrip() {
         let endpoint = std::env::var("SPICEDB_TEST_ENDPOINT")
             .expect("set SPICEDB_TEST_ENDPOINT, e.g. localhost:50051");
         let token = std::env::var("SPICEDB_TEST_TOKEN")
             .expect("set SPICEDB_TEST_TOKEN to the SpiceDB preshared key");
 
+        let insecure = !(endpoint.starts_with("https://") || endpoint.starts_with("grpcs://"));
         let client = SpiceDbClient::connect(DialConfig {
             endpoint,
-            insecure: true,
+            insecure,
             token,
         })
         .await

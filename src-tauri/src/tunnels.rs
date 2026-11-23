@@ -2,7 +2,7 @@
 
 use crate::connections::{Connection, TunnelConfig};
 use crate::error::{AppError, AppResult};
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -20,7 +20,7 @@ pub struct TunnelStatus {
     pub state: String,
     pub local_endpoint: String,
     pub message: Option<String>,
-    pub changed_at: DateTime<Utc>,
+    pub changed_at: Timestamp,
 }
 
 struct TunnelHandle {
@@ -46,7 +46,7 @@ impl TunnelManager {
             state: "connecting".into(),
             local_endpoint: config.local_endpoint(),
             message: None,
-            changed_at: Utc::now(),
+            changed_at: Timestamp::now(),
         }));
         let task = tauri::async_runtime::spawn(run_managed_tunnel(config, status.clone(), cancel_rx));
         self.handles.insert(
@@ -305,7 +305,7 @@ async fn set_status(status: &Arc<Mutex<TunnelStatus>>, state: &str, message: Opt
     let mut status = status.lock().await;
     status.state = state.into();
     status.message = message.map(|value| value.chars().take(1000).collect());
-    status.changed_at = Utc::now();
+    status.changed_at = Timestamp::now();
 }
 
 fn directive(config: &str, name: &str) -> Option<String> {
