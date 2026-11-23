@@ -123,3 +123,12 @@ The same links live in the app's footer.
 ## Contributing
 
 This is an early-stage project. Issues and PRs welcome. See [CLAUDE.md](CLAUDE.md) for the architecture overview.
+
+Use Conventional Commits for new commits and squash PR titles. Write a header
+as `type(scope): short description`. The scope is optional. Start the
+description with a lowercase verb, as in `fix(mcp): redact connection tokens`
+or `docs: clarify the build steps`. Mark a breaking change with `!` before
+the colon or a `BREAKING CHANGE:` footer.
+
+Run `pnpm install` from the repository root to install the Git hook. It checks
+each commit message with commitlint.
