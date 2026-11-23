@@ -11,7 +11,7 @@ A cross-platform desktop GUI for [SpiceDB](https://github.com/authzed/spicedb), 
 | Layer    | Tools                                                                       |
 | -------- | --------------------------------------------------------------------------- |
 | Backend  | Rust, Tauri 2, tonic 0.14, prost 0.14, tokio                                |
-| Frontend | React 18, TypeScript, Vite, Tailwind v3, TanStack Query, Zustand, CodeMirror 6 |
+| Frontend | React 19, TypeScript 7, Vite 8, Tailwind v4, TanStack Query, Zustand, CodeMirror 6 |
 | Storage  | tauri-plugin-store (JSON, non-sensitive) + keyring (OS keychain, tokens)    |
 | Proto    | Vendored `.proto` files compiled by `tonic-prost-build` with `protoc-bin-vendored` |
 

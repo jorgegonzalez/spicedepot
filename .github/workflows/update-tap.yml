@@ -66,7 +66,7 @@ jobs:
           echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
 
       - name: Checkout homebrew-tap with write token
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: jorgegonzalez/homebrew-tap
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}

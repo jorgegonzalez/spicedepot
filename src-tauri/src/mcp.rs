@@ -529,6 +529,7 @@ async fn call_tool(
             let subject_relation = optional("subject_relation").unwrap_or_default();
             let response = client
                 .lookup_resources(LookupResourcesRequest {
+                    optional_response_batch_size: 0,
                     consistency: fully_consistent(),
                     resource_object_type: resource_type,
                     permission,

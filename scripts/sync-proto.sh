@@ -4,7 +4,7 @@
 # dependencies) into src-tauri/proto/. Run this whenever you want to bump the
 # proto definitions; commit the resulting changes.
 #
-# We pin every upstream by commit SHA so the build stays reproducible.
+# We pin each upstream by commit SHA or release tag so the build stays reproducible.
 
 set -euo pipefail
 
@@ -13,11 +13,11 @@ ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
 DEST="$ROOT/src-tauri/proto"
 
 # ---- pinned versions ------------------------------------------------------
-AUTHZED_API_REF="cf71f1efcad946380af6d36b9bc60876f7820b24"   # authzed/api main @ 2026-05-01
-GOOGLEAPIS_REF="master"                                       # googleapis/googleapis (stable files)
-PGV_REF="v1.0.4"                                              # envoyproxy/protoc-gen-validate
-PROTOVALIDATE_REF="v0.7.1"                                    # bufbuild/protovalidate
-GRPC_GATEWAY_REF="v2.22.0"                                    # grpc-ecosystem/grpc-gateway
+AUTHZED_API_REF="b550d757d703fd39ea28799b30daa4de78cd1987"   # authzed/api main @ 2026-11-20
+GOOGLEAPIS_REF="2ebce051518da5fb33003def9d21c3986b989fb4" # googleapis/googleapis (stable files)
+PGV_REF="v1.3.3"                                              # envoyproxy/protoc-gen-validate
+PROTOVALIDATE_REF="v1.2.2"                                    # bufbuild/protovalidate
+GRPC_GATEWAY_REF="v2.34.0"                                    # grpc-ecosystem/grpc-gateway
 # --------------------------------------------------------------------------
 
 dl() {
@@ -49,8 +49,6 @@ dl bufbuild/protoc-gen-validate "$PGV_REF" "validate/validate.proto" "validate/v
 
 echo "→ bufbuild/protovalidate @ $PROTOVALIDATE_REF"
 dl bufbuild/protovalidate "$PROTOVALIDATE_REF" "proto/protovalidate/buf/validate/validate.proto"      "buf/validate/validate.proto"
-dl bufbuild/protovalidate "$PROTOVALIDATE_REF" "proto/protovalidate/buf/validate/expression.proto"    "buf/validate/expression.proto"
-dl bufbuild/protovalidate "$PROTOVALIDATE_REF" "proto/protovalidate/buf/validate/priv/private.proto"  "buf/validate/priv/private.proto"
 
 echo "→ grpc-ecosystem/grpc-gateway @ $GRPC_GATEWAY_REF"
 dl grpc-ecosystem/grpc-gateway "$GRPC_GATEWAY_REF" "protoc-gen-openapiv2/options/annotations.proto" "protoc-gen-openapiv2/options/annotations.proto"
