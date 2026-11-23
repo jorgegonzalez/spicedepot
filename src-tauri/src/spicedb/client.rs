@@ -291,6 +291,7 @@ mod tests {
         use crate::spicedb::proto::{DeleteRelationshipsRequest, RelationshipFilter};
         let _ = client
             .delete_relationships(DeleteRelationshipsRequest {
+                optional_cursor: None,
                 relationship_filter: Some(RelationshipFilter {
                     resource_type: "document".into(),
                     optional_resource_id: String::new(),
@@ -627,6 +628,7 @@ mod tests {
         // LookupResources: which docs can alice view? → doc1, doc2
         let resources_resp = client
             .lookup_resources(LookupResourcesRequest {
+                optional_response_batch_size: 0,
                 consistency: consistency.clone(),
                 resource_object_type: "document".into(),
                 permission: "view".into(),
@@ -880,8 +882,7 @@ mod tests {
 
     /// End-to-end Watch test: open a stream, write a relationship from a
     /// second task, and verify the watch receives the update within a short
-    /// timeout. Then drop the stream and confirm subsequent writes aren't
-    /// delivered (proves the cancellation path works).
+    /// timeout, including stream startup.
     #[tokio::test]
     #[ignore]
     async fn watch_receives_updates() {
@@ -919,25 +920,17 @@ mod tests {
             .expect("write_schema");
         reset_documents(&client).await;
 
-        // Open the watch stream first so we don't race the write.
-        let mut stream = client
-            .watch_stream(WatchRequest {
-                optional_object_types: vec!["document".into()],
-                optional_start_cursor: None,
-                optional_relationship_filters: Vec::new(),
-                optional_update_kinds: Vec::new(),
-            })
+        // Some servers send Watch response headers only after the first event.
+        // Start from a known revision so the writer and subscriber can race safely.
+        let cursor = client
+            .read_schema()
             .await
-            .expect("open watch");
-
-        // From a second task (so we can poll the stream while it runs),
-        // write one relationship after a short delay. The delay matters:
-        // SpiceDB's watch starts at "head revision" by default, so the
-        // write needs to happen *after* the stream is established.
+            .unwrap()
+            .read_at
+            .expect("read revision");
         let endpoint_c = endpoint.clone();
         let token_c = token.clone();
         let writer = tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_millis(200)).await;
             let writer_client = SpiceDbClient::connect(DialConfig {
                 endpoint: endpoint_c,
                 insecure: true,
@@ -976,6 +969,15 @@ mod tests {
         // Drain the stream until we see our update, with an overall timeout
         // so a broken Watch path fails loudly instead of hanging the test.
         let received = timeout(Duration::from_secs(5), async {
+            let mut stream = client
+                .watch_stream(WatchRequest {
+                    optional_object_types: vec!["document".into()],
+                    optional_start_cursor: Some(cursor),
+                    optional_relationship_filters: Vec::new(),
+                    optional_update_kinds: Vec::new(),
+                })
+                .await
+                .expect("open watch");
             loop {
                 let msg = stream
                     .next()
@@ -1002,11 +1004,6 @@ mod tests {
             received.subject.unwrap().object.unwrap().object_id,
             "alice"
         );
-
-        // Drop the stream — cancellation path. From here, subsequent writes
-        // must not deliver into this stream (verified implicitly by not
-        // panicking after drop).
-        drop(stream);
     }
 
     /// End-to-end bulk delete: write 4 relationships, bulk-delete the ones
@@ -1095,6 +1092,7 @@ mod tests {
         // Bulk delete every relationship where subject is alice.
         let del = client
             .delete_relationships(DeleteRelationshipsRequest {
+                optional_cursor: None,
                 relationship_filter: Some(RelationshipFilter {
                     resource_type: "document".into(),
                     optional_resource_id: String::new(),

@@ -17,14 +17,16 @@ export default defineConfig(async () => ({
   },
 
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       output: {
         // Keep CodeMirror in its own chunk (only used by SchemaPage). The
         // route-level lazy() splits in src/App.tsx already isolate it; this
         // makes the chunk reusable if any other page ever pulls in CM.
-        manualChunks(id: string) {
-          if (id.includes("node_modules/@codemirror")) return "codemirror";
-          if (id.includes("node_modules/@tanstack")) return "tanstack";
+        codeSplitting: {
+          groups: [
+            { name: "codemirror", test: /node_modules\/@codemirror\// },
+            { name: "tanstack", test: /node_modules\/@tanstack\// },
+          ],
         },
       },
     },

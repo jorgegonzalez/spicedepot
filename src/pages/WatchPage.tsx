@@ -79,6 +79,8 @@ export function WatchPage() {
       }
       liveId.current = id;
       setWatchId(id);
+      // An idle SpiceDB watch can defer its response headers until the first update.
+      setStarting(false);
     } catch (e) {
       if (attempt === generation.current) {
         setStartError((e as Error).message);

@@ -224,6 +224,7 @@ pub async fn bulk_delete_relationships(
         let limit_value = limit.unwrap_or(0);
         let resp = client
             .delete_relationships(DeleteRelationshipsRequest {
+                optional_cursor: None,
                 relationship_filter: Some(build_relationship_filter(&filter)),
                 optional_preconditions: Vec::new(),
                 optional_limit: limit_value,

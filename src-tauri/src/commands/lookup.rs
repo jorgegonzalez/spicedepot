@@ -59,6 +59,7 @@ pub async fn lookup_resources(
     super::log_err(async {
         let client = client_for(&state, &connection_id).await?;
         let req = LookupResourcesRequest {
+            optional_response_batch_size: 0,
             consistency: Some(fully_consistent()),
             resource_object_type: input.resource_type,
             permission: input.permission,

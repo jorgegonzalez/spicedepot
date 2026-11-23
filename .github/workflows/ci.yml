@@ -14,7 +14,7 @@ jobs:
     name: Rust (build + clippy + test)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install system deps (Linux for Tauri)
         run: |
@@ -28,7 +28,7 @@ jobs:
             libdbus-1-dev
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.100.0
         with:
           components: clippy, rustfmt
 
@@ -59,12 +59,12 @@ jobs:
     name: Frontend (typecheck + build)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 26
           cache: pnpm
 
       - name: Install
@@ -76,12 +76,18 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Build marketing site
+        working-directory: marketing
+        run: |
+          npm ci
+          npm run build
+
   integration:
     name: Integration tests (live SpiceDB)
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install system deps
         run: |
@@ -94,7 +100,7 @@ jobs:
             libsoup-3.0-dev \
             libdbus-1-dev
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.100.0
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -110,7 +116,7 @@ jobs:
         run: |
           docker run -d --name spicedb \
             -p 50051:50051 \
-            authzed/spicedb:v1.52.0 \
+            authzed/spicedb:v1.57.1 \
             serve \
               --grpc-preshared-key=spicedepot-ci-key \
               --datastore-engine=memory \
