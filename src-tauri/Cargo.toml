@@ -7,6 +7,10 @@ license = "Apache-2.0"
 edition = "2021"
 rust-version = "1.90"
 
+[workspace]
+members = ["credentials"]
+resolver = "2"
+
 [lib]
 name = "spicedepot_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
@@ -34,11 +38,7 @@ http = "1"
 tower = "0.5"
 
 # Storage
-# linux-native-sync-persistent is a combo: keyutils as a fast in-memory cache
-# layered over Secret Service for actual persistence across reboots. Falls back
-# cleanly when Secret Service isn't available (headless Linux); document the
-# headless caveat in CLAUDE.md.
-keyring = { version = "3", features = ["apple-native", "windows-native", "linux-native-sync-persistent"] }
+spicedepot-credentials = { path = "credentials" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1", features = ["v4", "serde"] }

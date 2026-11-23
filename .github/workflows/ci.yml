@@ -55,6 +55,45 @@ jobs:
         working-directory: src-tauri
         run: cargo test --lib
 
+  keyring:
+    name: Saved credential upgrade (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.100.0
+
+      - name: Set up disposable user keychain
+        if: runner.os == 'macOS'
+        run: |
+          keychain="$RUNNER_TEMP/compat.keychain-db"
+          security create-keychain -p compat "$keychain"
+          security default-keychain -d user -s "$keychain"
+          security unlock-keychain -p compat "$keychain"
+
+      - name: Install Linux Secret Service
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libdbus-1-dev gnome-keyring dbus-daemon
+
+      - name: Test saved credentials
+        if: runner.os != 'Linux'
+        working-directory: src-tauri
+        run: cargo test --locked -p spicedepot-credentials --test upgrade -- --ignored
+
+      - name: Test saved credentials in a D-Bus session
+        if: runner.os == 'Linux'
+        working-directory: src-tauri
+        run: |
+          dbus-run-session -- bash -eu -o pipefail -c '
+            printf %s compat | gnome-keyring-daemon --unlock --components=secrets
+            cargo test --locked -p spicedepot-credentials --test upgrade -- --ignored
+          '
+
   frontend:
     name: Frontend (typecheck + build)
     runs-on: ubuntu-latest

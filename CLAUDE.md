@@ -132,7 +132,7 @@ Every keychain call in `connections.rs` is wrapped in `tokio::task::spawn_blocki
 
 ### Linux: requires Secret Service for token persistence
 
-We use the `linux-native-sync-persistent` keyring feature, which layers the kernel keyutils session keyring (fast, in-process) over Secret Service (persistent, D-Bus). On a typical Linux desktop (GNOME/KDE/Cinnamon/etc.) tokens persist across reboots; on a headless Linux box without a running `secret-service` provider, tokens behave like `linux-native` alone — they survive within a session but vanish on reboot. Document this in the connection-creation flow once we expose it to the user.
+Tokens use the desktop Secret Service over the session D-Bus. The shipped keyring 3.6.3 builder wrote entries with the attributes `service=dev.spicelens.app`, `username=<connection UUID>`, and `target=default`. Keep all three when reading, updating, or deleting tokens. Headless sessions need an accessible, unlocked Secret Service provider.
 
 ## Proto code generation
 

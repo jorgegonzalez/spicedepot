@@ -18,9 +18,6 @@ use tauri_plugin_store::StoreExt;
 
 const STORE_FILE: &str = "connections.json";
 const STORE_KEY: &str = "connections";
-/// Keep this legacy service name stable when changing the product branding,
-/// so existing users' saved tokens remain available after an upgrade.
-const KEYRING_SERVICE: &str = "dev.spicelens.app";
 
 /// Public-facing connection record. Token never round-trips through this struct.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -226,7 +223,7 @@ impl ConnectionStore {
         // Best-effort token removal — log but don't fail the delete.
         let id_owned = id.to_string();
         tokio::task::spawn_blocking(move || {
-            if let Ok(entry) = keyring::Entry::new(KEYRING_SERVICE, &id_owned) {
+            if let Ok(entry) = spicedepot_credentials::entry(&id_owned) {
                 let _ = entry.delete_credential();
             }
         });
@@ -242,13 +239,13 @@ impl ConnectionStore {
 pub async fn read_token(id: &str) -> AppResult<String> {
     let id_owned = id.to_string();
     let res = tokio::task::spawn_blocking(move || {
-        keyring::Entry::new(KEYRING_SERVICE, &id_owned)?.get_password()
+        spicedepot_credentials::entry(&id_owned)?.get_password()
     })
     .await
     .map_err(|e| AppError::Other(format!("keychain task: {e}")))?;
     match res {
         Ok(t) => Ok(t),
-        Err(keyring::Error::NoEntry) => Ok(String::new()),
+        Err(spicedepot_credentials::Error::NoEntry) => Ok(String::new()),
         Err(e) => Err(AppError::from(e)),
     }
 }
@@ -259,7 +256,7 @@ pub async fn read_token(id: &str) -> AppResult<String> {
 /// to Tokio's blocking pool instead.
 async fn set_token_blocking(id: String, token: String) -> AppResult<()> {
     tokio::task::spawn_blocking(move || {
-        keyring::Entry::new(KEYRING_SERVICE, &id)?.set_password(&token)
+        spicedepot_credentials::entry(&id)?.set_password(&token)
     })
     .await
     .map_err(|e| AppError::Other(format!("keychain task: {e}")))??;
