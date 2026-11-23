@@ -16,7 +16,7 @@ pub enum AppError {
     Store(String),
 
     #[error("token storage (keychain): {0}")]
-    Keyring(#[from] keyring::Error),
+    Keyring(#[from] spicedepot_credentials::Error),
 
     #[error("invalid endpoint: {0}")]
     InvalidEndpoint(String),
